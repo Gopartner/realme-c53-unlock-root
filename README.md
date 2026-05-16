@@ -77,9 +77,9 @@ Install the driver from `tools/driver/SPD_Driver_R4.20.4201.zip` before proceedi
 ### 3. Enter SPRD U2S Diag Mode
 
 1. Power off phone completely
-2. Open the back cover and locate the test point on the motherboard
-3. Insert a screwdriver/pin to short the test point to ground
-4. Connect USB cable to PC — device should appear as **SPRD U2S Diag (COM3)**
+2. Connect USB cable to PC
+3. Hold **both volume keys**, then tap **power button** for ~1 second and release power
+4. Keep holding volume keys — device will appear as **SPRD U2S Diag (COM3)**
 
 ### 4. Unlock Bootloader
 

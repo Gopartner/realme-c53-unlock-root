@@ -76,9 +76,9 @@ Install driver dari `tools/driver/SPD_Driver_R4.20.4201.zip` sebelum unlock.
 ### 3. Masuk Mode SPRD U2S Diag
 
 1. Matikan HP
-2. Buka casing belakang, cari test point di motherboard
-3. Hubungkan test point ke ground dengan obeng/pin
-4. Colok kabel USB ke PC — HP akan terdeteksi sebagai **SPRD U2S Diag (COM3)**
+2. Colok kabel USB ke PC
+3. Tahan **kedua tombol volume**, lalu tap **tombol power** ~1 detik dan lepas power
+4. Tetap tahan tombol volume — HP akan terdeteksi sebagai **SPRD U2S Diag (COM3)**
 
 ### 4. Unlock Bootloader
 
