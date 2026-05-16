@@ -36,18 +36,7 @@ This guide covers **two** root methods:
 
 ### 1. Backup Data
 
-Unlocking bootloader will **wipe the device**. Backup your data first:
-
-```
-adb shell mkdir -p /sdcard/backup
-adb shell cp -r /sdcard/DCIM /sdcard/backup/
-adb shell cp -r /sdcard/Pictures /sdcard/backup/
-adb shell cp -r /sdcard/Download /sdcard/backup/
-adb shell cp -r /sdcard/Movies /sdcard/backup/
-adb shell cp -r /sdcard/Music /sdcard/backup/
-adb shell cp -r /sdcard/Documents /sdcard/backup/
-adb pull /sdcard/backup/ ./backup/
-```
+**WARNING:** Unlocking bootloader wipes the device. Backup your important data before proceeding.
 
 ### 2. Unlock Bootloader
 
