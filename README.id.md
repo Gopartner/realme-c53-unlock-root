@@ -120,7 +120,7 @@ di Windows. Gunakan WSL/Linux untuk clone.
 - [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) — KernelSU Next
 - [topjohnwu](https://github.com/topjohnwu/Magisk) — Magisk
 - Realme Open Source — Source code kernel
-- [opencode](https://opencode.ai) — Agen AI coding yang membantu dokumentasi
+- [opencode](https://opencode.ai) — Agen AI coding yang membantu proses unlock bootloader, root, dan dokumentasi
 - opencode/big-pickle — Model yang menjalankan agen AI
 
 ## Lisensi
