@@ -24,8 +24,32 @@ mendapatkan akses root di Realme C53 / RMX3760 (Unisoc T612).
 
 - PC Windows (atau OS lain dengan ADB/fastboot)
 - Kabel USB (mendukung transfer data)
-- Driver SPRD USB (untuk proses unlock)
+- Driver SPRD USB — sudah termasuk di `tools/driver/`
 - Waktu ~30 menit
+
+## Isi Repository
+
+```
+realme-c53-unlock-root/
+├── README.md                    # Panduan Bahasa Inggris
+├── README.id.md                 # Panduan Bahasa Indonesia
+├── AGENTS.md                    # Referensi untuk AI agent
+├── scripts/
+│   ├── backup.sh                # Backup data sebelum unlock
+│   ├── unlock.sh                # Prosedur unlock bootloader
+│   ├── root_magisk.sh           # Root dengan Magisk
+│   └── root_kernelsu.sh         # Root dengan KernelSU LKM
+├── tools/
+│   ├── unlock/                  # Tool unlock CVE-2022-38694 (spd_dump, dll)
+│   ├── driver/                  # Driver SPRD USB untuk Windows
+│   └── apk/                     # Aplikasi Magisk & KernelSU Next
+├── images/
+│   └── stock_boot.img           # File boot asli (64 MB)
+└── files/
+    └── partition_layout.txt     # Tabel partisi
+```
+
+Semua alat dan file sudah tersedia — tidak perlu download apapun lagi.
 
 ## Metode Root
 
@@ -41,34 +65,48 @@ Panduan ini mencakup **dua** metode root:
 **PERINGATAN:** Unlock bootloader akan **menghapus seluruh data** di HP.
 Backup data penting Anda sebelum melanjutkan.
 
-Gunakan `scripts/backup.sh` untuk membackup file media dan stock boot image.
+Jalankan `scripts/backup.sh` atau manual:
+```
+adb shell cp -r /sdcard/DCIM /sdcard/Download /sdcard/Pictures /sdcard/backup/
+adb pull /sdcard/backup/ ./backup/
+```
 
-### 2. Unlock Bootloader
+### 2. Install Driver SPRD
 
-Gunakan exploit [CVE-2022-38694](https://github.com/TomKing062/CVE-2022-38694_unlock_bootloader)
-oleh TomKing062.
+Install driver dari `tools/driver/SPD_Driver_R4.20.4201.zip` sebelum unlock.
 
-1. Install driver SPRD (ada di folder `sprd_driver/`)
+### 3. Unlock Bootloader
+
+Menggunakan exploit [CVE-2022-38694](https://github.com/TomKing062/CVE-2022-38694_unlock_bootloader)
+oleh TomKing062. Semua file ada di `tools/unlock/`.
+
+1. Install driver SPRD (`tools/driver/`)
 2. Matikan HP
-3. Hubungkan pin motherboard untuk masuk mode SPRD U2S Diag
+3. Hubungkan pin motherboard untuk masuk mode SPRD U2S Diag (COM3)
 4. Jalankan prosedur unlock (lihat `scripts/unlock.sh`)
 
-### 3. Backup Stock Boot Image
+### 4. Backup Stock Boot Image (jika tidak pakai yang sudah disediakan)
 
+Stock boot image sudah tersedia di `images/stock_boot.img`.
+Untuk dump sendiri (perangkat dan build yang sama):
 ```
 adb shell dd if=/dev/block/by-name/boot_a of=/data/local/tmp/boot.img
 adb pull /data/local/tmp/boot.img stock_boot.img
 ```
 
-### 4. Root dengan Magisk
+### 5. Root dengan Magisk
 
 ```
-# Push file Magisk ke HP
-adb push stock_boot.img /data/local/tmp/
-adb shell /data/local/tmp/magisk/boot_patch.sh /data/local/tmp/boot.img
-adb pull /data/local/tmp/magisk/new-boot.img magisk_patched_boot.img
+# Install aplikasi Magisk di HP
+adb install tools/apk/Magisk-v30.7.apk
 
-# Flash
+# Push stock boot ke HP
+adb push images/stock_boot.img /data/local/tmp/boot.img
+
+# Extract file Magisk lalu patch
+# (Lihat scripts/root_magisk.sh untuk langkah lengkap)
+
+# Flash boot yang sudah di-patch
 adb reboot bootloader
 fastboot flash boot_a magisk_patched_boot.img
 fastboot flash boot_b magisk_patched_boot.img
@@ -77,19 +115,22 @@ fastboot reboot
 
 Buka aplikasi Magisk → Superuser → Grant root ke Shell.
 
-### 5. Root dengan KernelSU (LKM)
+### 6. Root dengan KernelSU (LKM)
 
-Perlu membangun `kernelsu.ko` dari source kernel yang cocok dengan vermagic perangkat.
+Perlu membangun `kernelsu.ko` dari source kernel yang cocok.
 
 ```
-git clone <url_source_kernel>
-cd kernel_source
-curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/main/kernel/setup.sh" | bash -
-make ARCH=arm64 CC=clang LLVM=1 modules_prepare
-make ARCH=arm64 CC=clang LLVM=1 M=KernelSU modules
+# Install aplikasi KernelSU Next
+adb install tools/apk/KernelSU_Next.apk
+
+# Bangun kernel module dari source, lalu:
+adb shell /data/local/tmp/ksud boot-patch \
+    -b /data/local/tmp/boot.img \
+    -m /data/local/tmp/kernelsu.ko \
+    --magiskboot /data/local/tmp/magiskboot \
+    -o /data/local/tmp/ --out-name kernelsu_patched_boot.img
 ```
 
-Gunakan `ksud` untuk patch boot image dengan file .ko yang dihasilkan.
 Lihat `scripts/root_kernelsu.sh` untuk detail.
 
 ## Layout Partisi

@@ -26,8 +26,32 @@ on Realme C53 / RMX3760 (Unisoc T612).
 
 - Windows PC (or any OS with ADB/fastboot)
 - USB cable (data transfer capable)
-- SPRD USB driver (for unlock step)
+- SPRD USB driver — included in `tools/driver/`
 - ~30 minutes
+
+## Repository Contents
+
+```
+realme-c53-unlock-root/
+├── README.md                    # English guide
+├── README.id.md                 # Bahasa Indonesia guide
+├── AGENTS.md                    # AI agent reference
+├── scripts/
+│   ├── backup.sh                # Backup data before unlock
+│   ├── unlock.sh                # Unlock bootloader procedure
+│   ├── root_magisk.sh           # Root with Magisk
+│   └── root_kernelsu.sh         # Root with KernelSU LKM
+├── tools/
+│   ├── unlock/                  # CVE-2022-38694 unlock tool (spd_dump, etc.)
+│   ├── driver/                  # SPRD USB driver for Windows
+│   └── apk/                     # Magisk & KernelSU Next APKs
+├── images/
+│   └── stock_boot.img           # Stock boot image (64 MB)
+└── files/
+    └── partition_layout.txt     # Partition table
+```
+
+All tools and files are included — no need to download anything else.
 
 ## Methods
 
@@ -42,32 +66,48 @@ This guide covers **two** root methods:
 
 **WARNING:** Unlocking bootloader wipes the device. Backup your important data before proceeding.
 
-### 2. Unlock Bootloader
+Run `scripts/backup.sh` or manually:
+```
+adb shell cp -r /sdcard/DCIM /sdcard/Download /sdcard/Pictures /sdcard/backup/
+adb pull /sdcard/backup/ ./backup/
+```
 
-Use [CVE-2022-38694](https://github.com/TomKing062/CVE-2022-38694_unlock_bootloader)
-exploit by TomKing062.
+### 2. Install SPRD Driver
 
-1. Install SPRD driver (see `sprd_driver/`)
+Install the driver from `tools/driver/SPD_Driver_R4.20.4201.zip` before proceeding with unlock.
+
+### 3. Unlock Bootloader
+
+Uses [CVE-2022-38694](https://github.com/TomKing062/CVE-2022-38694_unlock_bootloader)
+exploit by TomKing062. All required files are in `tools/unlock/`.
+
+1. Install SPRD driver (`tools/driver/`)
 2. Power off phone
-3. Short-circuit the motherboard to enter SPRD U2S Diag mode
+3. Short-circuit the motherboard to enter SPRD U2S Diag mode (COM3)
 4. Run unlock procedure (see `scripts/unlock.sh`)
 
-### 3. Dump Stock Boot Image
+### 4. Dump Stock Boot Image (if not using provided one)
 
+A stock boot image is already included at `images/stock_boot.img`.
+To dump your own (same device, same build):
 ```
 adb shell dd if=/dev/block/by-name/boot_a of=/data/local/tmp/boot.img
 adb pull /data/local/tmp/boot.img stock_boot.img
 ```
 
-### 4. Root with Magisk
+### 5. Root with Magisk
 
 ```
-# Push Magisk files to phone
-adb push stock_boot.img /data/local/tmp/
-adb shell /data/local/tmp/magisk/boot_patch.sh /data/local/tmp/boot.img
-adb pull /data/local/tmp/magisk/new-boot.img magisk_patched_boot.img
+# Install Magisk app on phone
+adb install tools/apk/Magisk-v30.7.apk
 
-# Flash
+# Push stock boot to phone
+adb push images/stock_boot.img /data/local/tmp/boot.img
+
+# Extract and push Magisk files, then patch
+# (See scripts/root_magisk.sh for full automated steps)
+
+# Flash patched boot
 adb reboot bootloader
 fastboot flash boot_a magisk_patched_boot.img
 fastboot flash boot_b magisk_patched_boot.img
@@ -76,19 +116,20 @@ fastboot reboot
 
 Open Magisk app → Superuser → Grant root to Shell.
 
-### 5. Root with KernelSU (LKM)
+### 6. Root with KernelSU (LKM)
 
 Requires building `kernelsu.ko` from kernel source for matching vermagic.
 
 ```
-git clone <kernel_source_url>
-cd kernel_source
-# Add KernelSU as submodule
-curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/main/kernel/setup.sh" | bash -
-# Build only the module
-make ARCH=arm64 CC=clang LLVM=1 modules_prepare
-make ARCH=arm64 CC=clang LLVM=1 M=KernelSU modules
-# Use ksud to patch boot image with the .ko
+# Install KernelSU Next app
+adb install tools/apk/KernelSU_Next.apk
+
+# Build kernel module from source, then:
+adb shell /data/local/tmp/ksud boot-patch \
+    -b /data/local/tmp/boot.img \
+    -m /data/local/tmp/kernelsu.ko \
+    --magiskboot /data/local/tmp/magiskboot \
+    -o /data/local/tmp/ --out-name kernelsu_patched_boot.img
 ```
 
 See `scripts/root_kernelsu.sh` for details.

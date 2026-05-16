@@ -13,7 +13,7 @@
 
 set -e
 
-TOOL_DIR="./unlock_tool"
+TOOL_DIR="../tools/unlock"
 DEVICE_DIR="rmx3762"  # For RMX3760/RMX3762
 
 echo "=== Realme C53 Bootloader Unlock ==="

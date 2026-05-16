@@ -9,9 +9,9 @@
 
 set -e
 
-MAGISK_APK="Magisk-v30.7.apk"
-STOCK_BOOT="stock_boot.img"
-PATCHED_BOOT="magisk_patched_boot.img"
+MAGISK_APK="../tools/apk/Magisk-v30.7.apk"
+STOCK_BOOT="../images/stock_boot.img"
+PATCHED_BOOT="../magisk_patched_boot.img"
 
 echo "=== Root Realme C53 with Magisk ==="
 
