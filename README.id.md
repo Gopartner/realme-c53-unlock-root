@@ -7,15 +7,17 @@ mendapatkan akses root di Realme C53 / RMX3760 (Unisoc T612).
 
 | Spesifikasi | Nilai |
 |-------------|-------|
-| Model | Realme C53 (RMX3760 / RMX3762) |
-| SoC | Unisoc T612 (ums9230) |
-| CPU | 2x Cortex-A78 + 6x Cortex-A55 |
-| GPU | Mali-G57 |
-| Kernel | 5.15.178-android13-8 (non-GKI) |
-| Android | 15 (AP3A.240905.015.A2) |
-| Penyimpanan | 64 GB / 128 GB eMMC |
-| RAM | 4 GB / 6 GB |
-| Arsitektur | aarch64 |
+| Model | Realme C53 (RMX3760) |
+| SoC | Unisoc T612 (ums9230_hulk) |
+| CPU | 2x Cortex-A75 + 6x Cortex-A55 |
+| RAM | 8 GB |
+| Penyimpanan | 256 GB |
+| Layar | 720x1600 HD+, 320 dpi |
+| Kernel | 5.15.178-android13-8 |
+| Android | 15 (SDK 35) |
+| Arsitektur | arm64-v8a |
+| Pabrikan | realme |
+| Build | AP3A.240905.015.A2 |
 | Slot | A/B (boot_a/boot_b, init_boot_a/init_boot_b) |
 
 ## Persyaratan
