@@ -28,8 +28,6 @@ adb pull /sdcard/backup/ "$BACKUP_DIR/"
 echo "[2/3] Dumping stock boot image..."
 adb shell "dd if=/dev/block/by-name/boot_a of=/data/local/tmp/boot.bin 2>/dev/null"
 adb pull /data/local/tmp/boot.bin "$BACKUP_DIR/stock_boot.img"
-# Also copy to repo images/ for future use
-cp "$BACKUP_DIR/stock_boot.img" "../images/stock_boot.img" 2>/dev/null || true
 
 echo "[3/3] Saving build info..."
 adb shell getprop ro.build.fingerprint > "$BACKUP_DIR/build_info.txt"

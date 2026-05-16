@@ -45,8 +45,6 @@ realme-c53-unlock-root/
 │   ├── unlock/                  # CVE-2022-38694 unlock tool (spd_dump, etc.)
 │   ├── driver/                  # SPRD USB driver for Windows
 │   └── apk/                     # Magisk & KernelSU Next APKs
-├── images/
-│   └── stock_boot.img           # Stock boot image (64 MB)
 └── files/
     └── partition_layout.txt     # Partition table
 ```
@@ -86,10 +84,9 @@ exploit by TomKing062. All required files are in `tools/unlock/`.
 3. Short-circuit the motherboard to enter SPRD U2S Diag mode (COM3)
 4. Run unlock procedure (see `scripts/unlock.sh`)
 
-### 4. Dump Stock Boot Image (if not using provided one)
+### 4. Dump Stock Boot Image
 
-A stock boot image is already included at `images/stock_boot.img`.
-To dump your own (same device, same build):
+Dump stock boot image from your device (must be same model — RMX3760):
 ```
 adb shell dd if=/dev/block/by-name/boot_a of=/data/local/tmp/boot.img
 adb pull /data/local/tmp/boot.img stock_boot.img
@@ -102,7 +99,7 @@ adb pull /data/local/tmp/boot.img stock_boot.img
 adb install tools/apk/Magisk-v30.7.apk
 
 # Push stock boot to phone
-adb push images/stock_boot.img /data/local/tmp/boot.img
+adb push stock_boot.img /data/local/tmp/boot.img
 
 # Extract and push Magisk files, then patch
 # (See scripts/root_magisk.sh for full automated steps)

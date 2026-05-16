@@ -43,8 +43,6 @@ realme-c53-unlock-root/
 │   ├── unlock/                  # Tool unlock CVE-2022-38694 (spd_dump, dll)
 │   ├── driver/                  # Driver SPRD USB untuk Windows
 │   └── apk/                     # Aplikasi Magisk & KernelSU Next
-├── images/
-│   └── stock_boot.img           # File boot asli (64 MB)
 └── files/
     └── partition_layout.txt     # Tabel partisi
 ```
@@ -85,10 +83,9 @@ oleh TomKing062. Semua file ada di `tools/unlock/`.
 3. Hubungkan pin motherboard untuk masuk mode SPRD U2S Diag (COM3)
 4. Jalankan prosedur unlock (lihat `scripts/unlock.sh`)
 
-### 4. Backup Stock Boot Image (jika tidak pakai yang sudah disediakan)
+### 4. Backup Stock Boot Image
 
-Stock boot image sudah tersedia di `images/stock_boot.img`.
-Untuk dump sendiri (perangkat dan build yang sama):
+Dump stock boot dari HP Anda sendiri (harus model sama — RMX3760):
 ```
 adb shell dd if=/dev/block/by-name/boot_a of=/data/local/tmp/boot.img
 adb pull /data/local/tmp/boot.img stock_boot.img
@@ -101,7 +98,7 @@ adb pull /data/local/tmp/boot.img stock_boot.img
 adb install tools/apk/Magisk-v30.7.apk
 
 # Push stock boot ke HP
-adb push images/stock_boot.img /data/local/tmp/boot.img
+adb push stock_boot.img /data/local/tmp/boot.img
 
 # Extract file Magisk lalu patch
 # (Lihat scripts/root_magisk.sh untuk langkah lengkap)
