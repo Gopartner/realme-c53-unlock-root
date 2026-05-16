@@ -27,20 +27,6 @@ mendapatkan akses root di Realme C53 / RMX3760 (Unisoc T612).
 - Driver SPRD USB — sudah termasuk di `tools/driver/`
 - Waktu ~30 menit
 
-## Mulai Cepat (CLI)
-
-```
-python cli.py
-```
-Menu interaktif — tidak perlu jalankan script manual:
-
-1. Backup data dari HP
-2. Install driver SPRD
-3. Unlock bootloader
-4. Backup stock boot image
-5. Root dengan Magisk
-6. Verifikasi akses root
-
 ## Isi Repository
 
 ```
