@@ -61,6 +61,9 @@ def menu():
 +----------------------------------------+
 |  Realme C53 (RMX3760) Unlock & Root    |
 +----------------------------------------+
+|  NEW - STILL IN DEVELOPMENT            |
+|  NOT YET TESTED - USE AT YOUR OWN RISK |
++----------------------------------------+
 """)
     print("1) Backup data from phone")
     print("2) Install SPRD driver (open folder)")
