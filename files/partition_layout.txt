@@ -1,0 +1,58 @@
+Realme C53 (RMX3760) Partition Layout
+=======================================
+Dumped from PGPT via spd_dump.exe
+
+Partition sizes in megabytes (MB)
+
+| Partition         | Size  | Description                  |
+|-------------------|-------|------------------------------|
+| prodnv            | 64    | Production NV data           |
+| miscdata          | 1     | Bootloader unlock flag       |
+| misc              | 1     | Recovery mode info           |
+| trustos_a/b       | 6     | TrustZone OS                 |
+| sml_a/b           | 1     | Secure Monitor Loader        |
+| uboot_a/b         | 3     | U-Boot bootloader            |
+| uboot_log         | 16    | U-Boot log                   |
+| logo              | 8     | Boot logo                    |
+| fbootlogo         | 8     | Fastboot logo                |
+| l_fixnv1_a/b      | 2     | Fixed NV data 1              |
+| l_fixnv2_a/b      | 2     | Fixed NV data 2              |
+| l_runtimenv1/2    | 2     | Runtime NV data              |
+| persist           | 2     | Persistent data              |
+| l_modem_a/b       | 25    | Modem firmware               |
+| l_deltanv_a/b     | 1     | Delta NV data                |
+| l_gdsp_a/b        | 10    | GPU DSP firmware             |
+| l_ldsp_a/b        | 20    | LTE DSP firmware             |
+| l_agdsp_a/b       | 6     | Audio DSP firmware           |
+| pm_sys_a/b        | 1     | Power management sys         |
+| teecfg_a/b        | 1     | TEE configuration            |
+| hypervsior_a/b    | 10    | Hypervisor                   |
+| boot_a/b          | 64    | Kernel + DTB (NO ramdisk)    |
+| vendor_boot_a/b   | 100   | Vendor ramdisk               |
+| init_boot_a/b     | 8     | Device init ramdisk          |
+| dtb_a/b           | 8     | Device Tree Blob             |
+| dtbo_a/b          | 8     | Device Tree Blob Overlay     |
+| my_preload        | 1800  | Preload (bloatware)          |
+| super             | 8000  | Logical (system/product/etc) |
+| cache             | 64    | Cache                        |
+| blackbox          | 200   | Debug data                   |
+| opporeserve       | 64    | OPP reserved                 |
+| vbmeta_a/b        | 1     | Verified Boot metadata       |
+| ocdt_a/b          | 8     | OEM config data table        |
+| metadata          | 64    | Metadata (FBE key, etc)      |
+| sysdumpdb         | 10    | System dump database         |
+| vbmeta_system     | 1     | AVB for system               |
+| vbmeta_vendor     | 1     | AVB for vendor               |
+| vbmeta_*          | 1     | AVB for other partitions     |
+| avbmeta_rs_a/b    | 1     | AVB metadata reserve         |
+| common_rs1/2_a/b  | 8/16  | Common reserved              |
+| calinv            | 2     | Calibration inverse          |
+| oplusreserve*     | 8-64  | OPP reserved                 |
+| userdata          | rest  | User data                    |
+
+Key Observations:
+- A/B slot layout for critical partitions
+- boot_a/b have NO ramdisk (kernel + DTB only)
+- init_boot_a/b contain the device-specific ramdisk
+- miscdata stores the bootloader unlock state
+- Unisoc T612 (ums9230) architecture
