@@ -13,56 +13,53 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y git curl lz4
+        sudo apt-get install -y git curl lz4 gcc-aarch64-linux-gnu bc
 
-    - name: Clone kernel source
+    - name: Checkout repo (for .config)
+      uses: actions/checkout@v4
+      with:
+        path: repo
+
+    - name: Clone ACK android14-5.15 kernel
       run: |
-        git clone --depth 1 \
-          https://github.com/realme-kernel-opensource/realme_C51_C53_Note50_C60_C51_N53-AndroidU-kernel-source.git \
+        git clone --depth 1 --branch android14-5.15 \
+          https://android.googlesource.com/kernel/common \
           kernel_source
+
+    - name: Fix kernel version to match device (5.15.178-android13-8)
+      run: |
+        cd kernel_source
+        sed -i 's/^SUBLEVEL = .*/SUBLEVEL = 178/' Makefile
+        sed -i 's/^EXTRAVERSION = .*/EXTRAVERSION = -android13-8/' Makefile
+
+    - name: Copy device .config
+      run: |
+        cp repo/.config kernel_source/.config
 
     - name: Add KernelSU-Next
       run: |
         cd kernel_source
         curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/main/kernel/setup.sh" | bash -
 
-    - name: Download Android prebuilt Clang
-      run: |
-        git clone --depth 1 \
-          https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86.git \
-          clang_prebuilt
-        CLANG_DIR=$(ls -d clang_prebuilt/clang-* | sort | tail -1)
-        echo "CLANG_DIR=$CLANG_DIR" >> $GITHUB_ENV
-
-    - name: Download build tools
-      run: |
-        git clone --depth 1 \
-          https://android.googlesource.com/platform/build/kernel.git \
-          build_kernel
-
-    - name: Set up build environment
-      run: |
-        echo "PATH=$CLANG_DIR/bin:$PWD/build_kernel/build-tools/path/linux-x86:$PATH" >> $GITHUB_ENV
-        echo "ARCH=arm64" >> $GITHUB_ENV
-        echo "CC=clang" >> $GITHUB_ENV
-        echo "LLVM=1" >> $GITHUB_ENV
-        echo "CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
-
-    - name: Configure kernel
+    - name: Configure kernel with olddefconfig
       run: |
         cd kernel_source
-        make ARCH=arm64 CC=clang LLVM=1 vendor/ums9230_defconfig
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+
+    - name: Build modules_prepare
+      run: |
+        cd kernel_source
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
 
     - name: Build KernelSU module
       run: |
         cd kernel_source
-        make ARCH=arm64 CC=clang LLVM=1 modules_prepare
-        make ARCH=arm64 CC=clang LLVM=1 M=KernelSU modules
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- M=KernelSU modules
 
-    - name: Check module
+    - name: Check module vermagic
       run: |
         ls -lh kernel_source/KernelSU/kernelsu.ko
-        modinfo kernel_source/KernelSU/kernelsu.ko | head -10
+        modinfo kernel_source/KernelSU/kernelsu.ko
 
     - name: Upload module as artifact
       uses: actions/upload-artifact@v4

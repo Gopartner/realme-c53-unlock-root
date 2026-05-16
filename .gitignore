@@ -11,3 +11,13 @@ Log/
 
 # Exclude large personal backups from unlock tool
 tools/unlock/boot.bin
+
+# Kernel source directories (too large for repo)
+kernel_source/
+kernel_ack_5.15/
+backup/
+ndk.zip
+tc.tar.xz
+toolchain.tar.bz2
+toolchain.tar.gz
+toolchain/
