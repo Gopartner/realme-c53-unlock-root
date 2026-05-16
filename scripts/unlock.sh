@@ -50,11 +50,6 @@ read -p "Press Enter when ready..."
 echo "[4/5] Executing unlock payload..."
 ./spd_dump.exe write 0x00002000 spl-unlock.bin
 
-echo ""
-echo "=== SCREWDRIVER STEP 2 ==="
-echo "Same procedure: hold both vol keys, tap power 1 second."
-read -p "Press Enter when ready..."
-
 echo "[5/5] Restoring bootchain and wiping misc..."
 ./spd_dump.exe write 0x00002000 u-boot-spl-16k-sign.bin
 ./spd_dump.exe write 0x0000c000 uboot_bak.bin

@@ -95,9 +95,8 @@ The script will:
 3. Erase SPL and write cboot
 4. **Wait for you to do the screwdriver trick** (hold both vol keys + tap power)
 5. Execute unlock payload (`spl-unlock.bin`)
-6. **Screwdriver trick again**
-7. Restore original SPL and uboot
-8. Wipe misc partition (bootloader now unlocked)
+6. Restore original SPL and uboot (no button pressing needed)
+7. Wipe misc partition (bootloader now unlocked)
 
 Verify: `miscdata.bin` should contain non-zero data.
 

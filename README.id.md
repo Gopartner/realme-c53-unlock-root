@@ -94,9 +94,8 @@ Proses yang akan berjalan:
 3. Erase SPL dan write cboot
 4. **Tunggu Anda melakukan screwdriver trick** (tahan kedua tombol volume + tap power)
 5. Jalankan payload unlock (`spl-unlock.bin`)
-6. **Screwdriver trick lagi**
-7. Restore original SPL dan uboot
-8. Wipe partisi misc (bootloader sekarang tidak terkunci)
+6. Restore original SPL dan uboot (tanpa tekan tombol lagi)
+7. Wipe partisi misc (bootloader sekarang tidak terkunci)
 
 Verifikasi: `miscdata.bin` berisi data non-zero.
 
