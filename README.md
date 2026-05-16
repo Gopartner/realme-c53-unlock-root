@@ -118,6 +118,8 @@ Use WSL/Linux to clone.
 - [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) — KernelSU Next
 - [topjohnwu](https://github.com/topjohnwu/Magisk) — Magisk
 - Realme Open Source — Kernel source code
+- [opencode](https://opencode.ai) — AI coding agent used to document this guide
+- opencode/big-pickle — Model powering the AI agent
 
 ## License
 
