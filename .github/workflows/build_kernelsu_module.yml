@@ -1,0 +1,72 @@
+name: Build KernelSU LKM for Realme C53
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git curl lz4
+
+    - name: Clone kernel source
+      run: |
+        git clone --depth 1 \
+          https://github.com/realme-kernel-opensource/realme_C51_C53_Note50_C60_C51_N53-AndroidU-kernel-source.git \
+          kernel_source
+
+    - name: Add KernelSU-Next
+      run: |
+        cd kernel_source
+        curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/main/kernel/setup.sh" | bash -
+
+    - name: Download Android prebuilt Clang
+      run: |
+        git clone --depth 1 \
+          https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86.git \
+          clang_prebuilt
+        CLANG_DIR=$(ls -d clang_prebuilt/clang-* | sort | tail -1)
+        echo "CLANG_DIR=$CLANG_DIR" >> $GITHUB_ENV
+
+    - name: Download build tools
+      run: |
+        git clone --depth 1 \
+          https://android.googlesource.com/platform/build/kernel.git \
+          build_kernel
+
+    - name: Set up build environment
+      run: |
+        echo "PATH=$CLANG_DIR/bin:$PWD/build_kernel/build-tools/path/linux-x86:$PATH" >> $GITHUB_ENV
+        echo "ARCH=arm64" >> $GITHUB_ENV
+        echo "CC=clang" >> $GITHUB_ENV
+        echo "LLVM=1" >> $GITHUB_ENV
+        echo "CROSS_COMPILE=aarch64-linux-gnu-" >> $GITHUB_ENV
+
+    - name: Configure kernel
+      run: |
+        cd kernel_source
+        make ARCH=arm64 CC=clang LLVM=1 vendor/ums9230_defconfig
+
+    - name: Build KernelSU module
+      run: |
+        cd kernel_source
+        make ARCH=arm64 CC=clang LLVM=1 modules_prepare
+        make ARCH=arm64 CC=clang LLVM=1 M=KernelSU modules
+
+    - name: Check module
+      run: |
+        ls -lh kernel_source/KernelSU/kernelsu.ko
+        modinfo kernel_source/KernelSU/kernelsu.ko | head -10
+
+    - name: Upload module as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: kernelsu_rmx3760
+        path: kernel_source/KernelSU/kernelsu.ko
+        if-no-files-found: error
