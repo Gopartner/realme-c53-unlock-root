@@ -3,6 +3,8 @@
 Complete guide to unlock bootloader (via CVE-2022-38694) and gain root access
 on Realme C53 / RMX3760 (Unisoc T612).
 
+> **Bahasa Indonesia?** Lihat [`README.id.md`](README.id.md) untuk panduan dalam bahasa Indonesia.
+
 ## Device Specifications
 
 | Spec | Value |
