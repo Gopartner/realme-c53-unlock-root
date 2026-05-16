@@ -63,72 +63,81 @@ Panduan ini mencakup **dua** metode root:
 **PERINGATAN:** Unlock bootloader akan **menghapus seluruh data** di HP.
 Backup data penting Anda sebelum melanjutkan.
 
-Jalankan `scripts/backup.sh` atau manual:
 ```
-adb shell cp -r /sdcard/DCIM /sdcard/Download /sdcard/Pictures /sdcard/backup/
-adb pull /sdcard/backup/ ./backup/
+./scripts/backup.sh
 ```
+
+Perintah ini akan menyimpan file media (DCIM, Pictures, Download, dll) dan mendump stock boot image.
 
 ### 2. Install Driver SPRD
 
 Install driver dari `tools/driver/SPD_Driver_R4.20.4201.zip` sebelum unlock.
 
-### 3. Unlock Bootloader
+### 3. Masuk Mode SPRD U2S Diag
 
-Menggunakan exploit [CVE-2022-38694](https://github.com/TomKing062/CVE-2022-38694_unlock_bootloader)
-oleh TomKing062. Semua file ada di `tools/unlock/`.
+1. Matikan HP
+2. Buka casing belakang, cari test point di motherboard
+3. Hubungkan test point ke ground dengan obeng/pin
+4. Colok kabel USB ke PC — HP akan terdeteksi sebagai **SPRD U2S Diag (COM3)**
 
-1. Install driver SPRD (`tools/driver/`)
-2. Matikan HP
-3. Hubungkan pin motherboard untuk masuk mode SPRD U2S Diag (COM3)
-4. Jalankan prosedur unlock (lihat `scripts/unlock.sh`)
+### 4. Unlock Bootloader
 
-### 4. Backup Stock Boot Image
+Semua alat ada di `tools/unlock/`. Jalankan script unlock:
 
-Dump stock boot dari HP Anda sendiri (harus model sama — RMX3760):
+```
+./scripts/unlock.sh
+```
+
+Proses yang akan berjalan:
+1. Dump partisi bootchain (PGPT, SPL, uboot)
+2. Generate SPL yang sudah di-patch via `gen_spl-unlock.exe`
+3. Erase SPL dan write cboot
+4. **Tunggu Anda melakukan screwdriver trick** (tahan kedua tombol volume + tap power)
+5. Jalankan payload unlock (`spl-unlock.bin`)
+6. **Screwdriver trick lagi**
+7. Restore original SPL dan uboot
+8. Wipe partisi misc (bootloader sekarang tidak terkunci)
+
+Verifikasi: `miscdata.bin` berisi data non-zero.
+
+### 5. Backup Stock Boot Image
+
+Setelah HP reboot (factory reset), atur Android dan aktifkan USB debugging:
+
+```
+./scripts/backup.sh
+```
+
+Atau manual:
 ```
 adb shell dd if=/dev/block/by-name/boot_a of=/data/local/tmp/boot.img
 adb pull /data/local/tmp/boot.img stock_boot.img
 ```
 
-### 5. Root dengan Magisk
+### 6. Root dengan Magisk (direkomendasikan)
 
 ```
-# Install aplikasi Magisk di HP
-adb install tools/apk/Magisk-v30.7.apk
-
-# Push stock boot ke HP
-adb push stock_boot.img /data/local/tmp/boot.img
-
-# Extract file Magisk lalu patch
-# (Lihat scripts/root_magisk.sh untuk langkah lengkap)
-
-# Flash boot yang sudah di-patch
-adb reboot bootloader
-fastboot flash boot_a magisk_patched_boot.img
-fastboot flash boot_b magisk_patched_boot.img
-fastboot reboot
+./scripts/root_magisk.sh
 ```
 
-Buka aplikasi Magisk → Superuser → Grant root ke Shell.
+Script akan:
+1. Install aplikasi Magisk di HP
+2. Ekstrak file Magisk dari APK
+3. Push stock boot + file Magisk ke HP
+4. Patch boot image dengan Magisk (membuat ramdisk baru dengan magiskinit)
+5. Flash boot yang sudah di-patch ke `boot_a` dan `boot_b`
+6. Reboot
 
-### 6. Root dengan KernelSU (LKM)
-
-Perlu membangun `kernelsu.ko` dari source kernel yang cocok.
+Setelah reboot, buka **Magisk** → **Superuser** → Grant root ke **Shell**.
 
 ```
-# Install aplikasi KernelSU Next
-adb install tools/apk/KernelSU_Next.apk
-
-# Bangun kernel module dari source, lalu:
-adb shell /data/local/tmp/ksud boot-patch \
-    -b /data/local/tmp/boot.img \
-    -m /data/local/tmp/kernelsu.ko \
-    --magiskboot /data/local/tmp/magiskboot \
-    -o /data/local/tmp/ --out-name kernelsu_patched_boot.img
+adb shell su -c id
+# -> uid=0(root)
 ```
 
-Lihat `scripts/root_kernelsu.sh` untuk detail.
+### 7. Root dengan KernelSU (LKM)
+
+Perlu membangun `kernelsu.ko` dari source kernel (lihat `scripts/root_kernelsu.sh`).
 
 ## Layout Partisi
 

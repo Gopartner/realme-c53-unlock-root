@@ -64,72 +64,81 @@ This guide covers **two** root methods:
 
 **WARNING:** Unlocking bootloader wipes the device. Backup your important data before proceeding.
 
-Run `scripts/backup.sh` or manually:
 ```
-adb shell cp -r /sdcard/DCIM /sdcard/Download /sdcard/Pictures /sdcard/backup/
-adb pull /sdcard/backup/ ./backup/
+./scripts/backup.sh
 ```
+
+This saves your media files (DCIM, Pictures, Download, etc.) and dumps the stock boot image.
 
 ### 2. Install SPRD Driver
 
 Install the driver from `tools/driver/SPD_Driver_R4.20.4201.zip` before proceeding with unlock.
 
-### 3. Unlock Bootloader
+### 3. Enter SPRD U2S Diag Mode
 
-Uses [CVE-2022-38694](https://github.com/TomKing062/CVE-2022-38694_unlock_bootloader)
-exploit by TomKing062. All required files are in `tools/unlock/`.
+1. Power off phone completely
+2. Open the back cover and locate the test point on the motherboard
+3. Insert a screwdriver/pin to short the test point to ground
+4. Connect USB cable to PC — device should appear as **SPRD U2S Diag (COM3)**
 
-1. Install SPRD driver (`tools/driver/`)
-2. Power off phone
-3. Short-circuit the motherboard to enter SPRD U2S Diag mode (COM3)
-4. Run unlock procedure (see `scripts/unlock.sh`)
+### 4. Unlock Bootloader
 
-### 4. Dump Stock Boot Image
+All tools are in `tools/unlock/`. Run the unlock script:
 
-Dump stock boot image from your device (must be same model — RMX3760):
+```
+./scripts/unlock.sh
+```
+
+The script will:
+1. Dump bootchain partitions (PGPT, SPL, uboot)
+2. Generate patched SPL via `gen_spl-unlock.exe`
+3. Erase SPL and write cboot
+4. **Wait for you to do the screwdriver trick** (hold both vol keys + tap power)
+5. Execute unlock payload (`spl-unlock.bin`)
+6. **Screwdriver trick again**
+7. Restore original SPL and uboot
+8. Wipe misc partition (bootloader now unlocked)
+
+Verify: `miscdata.bin` should contain non-zero data.
+
+### 5. Dump Stock Boot Image
+
+After phone reboots (factory reset), set up Android and enable USB debugging:
+
+```
+./scripts/backup.sh
+```
+
+Or manually:
 ```
 adb shell dd if=/dev/block/by-name/boot_a of=/data/local/tmp/boot.img
 adb pull /data/local/tmp/boot.img stock_boot.img
 ```
 
-### 5. Root with Magisk
+### 6. Root with Magisk (recommended)
 
 ```
-# Install Magisk app on phone
-adb install tools/apk/Magisk-v30.7.apk
-
-# Push stock boot to phone
-adb push stock_boot.img /data/local/tmp/boot.img
-
-# Extract and push Magisk files, then patch
-# (See scripts/root_magisk.sh for full automated steps)
-
-# Flash patched boot
-adb reboot bootloader
-fastboot flash boot_a magisk_patched_boot.img
-fastboot flash boot_b magisk_patched_boot.img
-fastboot reboot
+./scripts/root_magisk.sh
 ```
 
-Open Magisk app → Superuser → Grant root to Shell.
+The script will:
+1. Install Magisk app on phone
+2. Extract Magisk binaries from the APK
+3. Push stock boot image + Magisk files to phone
+4. Patch boot image with Magisk (creates new ramdisk with magiskinit)
+5. Flash patched boot to both `boot_a` and `boot_b`
+6. Reboot
 
-### 6. Root with KernelSU (LKM)
-
-Requires building `kernelsu.ko` from kernel source for matching vermagic.
+After reboot, open **Magisk** app → **Superuser** → Grant root to **Shell**.
 
 ```
-# Install KernelSU Next app
-adb install tools/apk/KernelSU_Next.apk
-
-# Build kernel module from source, then:
-adb shell /data/local/tmp/ksud boot-patch \
-    -b /data/local/tmp/boot.img \
-    -m /data/local/tmp/kernelsu.ko \
-    --magiskboot /data/local/tmp/magiskboot \
-    -o /data/local/tmp/ --out-name kernelsu_patched_boot.img
+adb shell su -c id
+# -> uid=0(root)
 ```
 
-See `scripts/root_kernelsu.sh` for details.
+### 7. Root with KernelSU (LKM)
+
+Requires building `kernelsu.ko` from kernel source (see `scripts/root_kernelsu.sh`).
 
 ## Partition Layout
 
