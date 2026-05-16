@@ -29,6 +29,21 @@ on Realme C53 / RMX3760 (Unisoc T612).
 - SPRD USB driver — included in `tools/driver/`
 - ~30 minutes
 
+## Quick Start (CLI)
+
+```
+python cli.py
+```
+
+Menu-driven tool — no need to run scripts manually:
+
+1. Backup data from phone
+2. Install SPRD driver
+3. Unlock bootloader
+4. Dump stock boot image
+5. Root with Magisk
+6. Verify root access
+
 ## Repository Contents
 
 ```
