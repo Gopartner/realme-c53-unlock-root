@@ -58,10 +58,10 @@ jobs:
         cd kernel_source
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
 
-    - name: Build KernelSU module
+    - name: Build KernelSU module only
       run: |
         cd kernel_source
-        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-unused-value" modules
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-unused-value" M=drivers/kernelsu modules
 
     - name: Check built module
       run: |
