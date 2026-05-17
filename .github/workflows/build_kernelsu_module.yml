@@ -13,7 +13,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y git curl lz4 gcc-aarch64-linux-gnu bc libelf-dev build-essential bison flex libssl-dev
+        sudo apt-get install -y git curl lz4 gcc-aarch64-linux-gnu bc libelf-dev build-essential bison flex libssl-dev dwarves
 
     - name: Checkout repo (for .config)
       uses: actions/checkout@v4
