@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       localversion:
-        description: 'CONFIG_LOCALVERSION suffix (e.g. -g0c749b198e8d-ab44). Leave empty for clean 5.15.178-android13-8'
+        description: 'Extra suffix after -android13-8 (e.g. -g0c749b198e8d-ab44). Leave empty for clean 5.15.178-android13-8'
         required: false
         default: ''
         type: string
@@ -60,13 +60,14 @@ jobs:
         cd kernel_source
         # GKI defconfig has KPROBES=y (needed for KSU kprobe hooking) and EXT4_FS=y
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- gki_defconfig
+        # Use scripts/config to properly set values (avoids duplicate lines)
         # Disable LOCALVERSION_AUTO so we control the exact version string
-        echo "CONFIG_LOCALVERSION_AUTO=n" >> .config
-        # Set LOCALVERSION: if user provided one, use it; otherwise empty (clean 5.15.178-android13-8)
+        scripts/config --disable LOCALVERSION_AUTO
+        # Set LOCALVERSION: include android13-8 suffix + user-provided suffix
         LOCALVER="${{ inputs.localversion || '' }}"
-        echo "CONFIG_LOCALVERSION=\"$LOCALVER\"" >> .config
+        scripts/config --set-str LOCALVERSION "-android13-8$LOCALVER"
         # Enable KernelSU as module
-        echo "CONFIG_KSU=m" >> .config
+        scripts/config --module KSU
         # Regenerate config
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
         # Display the final UTS_RELEASE for verification
