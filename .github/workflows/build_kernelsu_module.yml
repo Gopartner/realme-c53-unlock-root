@@ -51,9 +51,9 @@ jobs:
           rm drivers/kernelsu/include/uapi
           cp -r KernelSU-Next/uapi drivers/kernelsu/include/uapi
         fi
-        # Insert Kconfig reference before the last endmenu in drivers/Kconfig
+        # Insert Kconfig reference before endmenu in drivers/Kconfig
         grep -q "source \"drivers/kernelsu/Kconfig\"" drivers/Kconfig || \
-          sed -i '${/^endmenu$/i\source "drivers/kernelsu/Kconfig"\n}' drivers/Kconfig
+          sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' drivers/Kconfig
 
     - name: Configure kernel with GKI defconfig + KSU
       run: |

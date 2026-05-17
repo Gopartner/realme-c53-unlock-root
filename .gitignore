@@ -21,3 +21,5 @@ tc.tar.xz
 toolchain.tar.bz2
 toolchain.tar.gz
 toolchain/
+
+*.img
