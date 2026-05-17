@@ -1,7 +1,13 @@
-name: Build KernelSU LKM for Realme C53
+name: Build KernelSU LKM for Realme C53 (RMX3760)
 
 on:
   workflow_dispatch:
+    inputs:
+      localversion:
+        description: 'CONFIG_LOCALVERSION suffix (e.g. -g0c749b198e8d-ab44). Leave empty for clean 5.15.178-android13-8'
+        required: false
+        default: ''
+        type: string
   push:
     branches: [main]
 
@@ -13,9 +19,10 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y git curl lz4 gcc-aarch64-linux-gnu bc libelf-dev build-essential bison flex libssl-dev dwarves
+        sudo apt-get install -y git curl lz4 gcc-aarch64-linux-gnu bc \
+          libelf-dev build-essential bison flex libssl-dev dwarves
 
-    - name: Checkout repo (for .config)
+    - name: Checkout repo (for reference .config)
       uses: actions/checkout@v4
       with:
         path: repo
@@ -32,28 +39,38 @@ jobs:
         sed -i 's/^SUBLEVEL = .*/SUBLEVEL = 178/' Makefile
         sed -i 's/^EXTRAVERSION = .*/EXTRAVERSION = -android13-8/' Makefile
 
-    - name: Add KernelSU-Next source (Kconfig only — not in Makefile)
+    - name: Add KernelSU-Next source
       run: |
         cd kernel_source
         git clone --depth 1 --branch dev https://github.com/KernelSU-Next/KernelSU-Next.git
         mkdir -p drivers/kernelsu
         cp -r KernelSU-Next/kernel/* drivers/kernelsu/
-        cp -r KernelSU-Next/uapi drivers/kernelsu/
-        # Add Kconfig only (so CONFIG_KSU=m survives olddefconfig)
-        # Do NOT add to drivers/Makefile — builds as external module after full kernel
+        # Fix uapi symlink: kernel/include/uapi -> ../../uapi/
+        # Resolve it so the copied files are self-contained
+        if [ -L "drivers/kernelsu/include/uapi" ]; then
+          rm drivers/kernelsu/include/uapi
+          cp -r KernelSU-Next/uapi drivers/kernelsu/include/uapi
+        fi
+        # Insert Kconfig reference before the last endmenu in drivers/Kconfig
         grep -q "source \"drivers/kernelsu/Kconfig\"" drivers/Kconfig || \
-          sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' drivers/Kconfig
+          sed -i '${/^endmenu$/i\source "drivers/kernelsu/Kconfig"\n}' drivers/Kconfig
 
-    - name: Configure kernel with GKI defconfig + KSU symbol
+    - name: Configure kernel with GKI defconfig + KSU
       run: |
         cd kernel_source
-        # Use GKI defconfig which has CONFIG_KPROBES=y and CONFIG_EXT4_FS=y (KSU dependencies)
+        # GKI defconfig has KPROBES=y (needed for KSU kprobe hooking) and EXT4_FS=y
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- gki_defconfig
-        # Match device UTS_RELEASE exactly: 5.15.178-android13-8-g0c749b198e8d-ab44
-        echo "CONFIG_LOCALVERSION=\"-g0c749b198e8d-ab44\"" >> .config
-        # Add CONFIG_KSU=m so Module.symvers has KSU symbols for external module build
+        # Disable LOCALVERSION_AUTO so we control the exact version string
+        echo "CONFIG_LOCALVERSION_AUTO=n" >> .config
+        # Set LOCALVERSION: if user provided one, use it; otherwise empty (clean 5.15.178-android13-8)
+        LOCALVER="${{ inputs.localversion || '' }}"
+        echo "CONFIG_LOCALVERSION=\"$LOCALVER\"" >> .config
+        # Enable KernelSU as module
         echo "CONFIG_KSU=m" >> .config
+        # Regenerate config
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+        # Display the final UTS_RELEASE for verification
+        grep "UTS_RELEASE" include/generated/utsrelease.h 2>/dev/null || true
 
     - name: Build full kernel (generates Module.symvers, flask.h, etc.)
       run: |
@@ -64,30 +81,32 @@ jobs:
     - name: Build kernelsu.ko as external module
       run: |
         cd kernel_source
-        # KBUILD_MODPOST_WARN=1: KSU resolves many internal symbols at runtime via kallsyms
+        # KBUILD_MODPOST_WARN=1: KSU resolves internal symbols at runtime via kallsyms
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
           KCFLAGS="-Wno-unused-value" \
           KBUILD_MODPOST_WARN=1 \
           M=drivers/kernelsu modules
 
-    - name: Locate kernelsu.ko
-      run: |
-        find kernel_source -name "kernelsu.ko" -type f 2>/dev/null | head -5
-
-    - name: Check built module
+    - name: Extract and display vermagic
       run: |
         KSU_KO=$(find kernel_source -name "kernelsu.ko" -type f 2>/dev/null | head -1)
         if [ -z "$KSU_KO" ]; then
           echo "kernelsu.ko not found!"
-          ls -la kernel_source/drivers/kernelsu/ 2>/dev/null || echo "drivers/kernelsu/ does not exist"
           find kernel_source -name "*.ko" -type f 2>/dev/null | head -20
           exit 1
         fi
-        echo "Module found: $KSU_KO"
+        echo "=== Module info ==="
         modinfo "$KSU_KO"
+        echo ""
+        echo "=== Vermagic ==="
+        modinfo -F vermagic "$KSU_KO"
+        echo ""
+        echo "=== Device vermagic (expected) ==="
+        echo "Run on device: cat /sys/module/hello/sections/vermagic 2>/dev/null || cat /proc/version"
+        echo "Or: adb shell 'cat /proc/version || uname -a'"
         ls -lh "$KSU_KO"
 
-    - name: Upload module as artifact
+    - name: Upload kernelsu.ko as artifact
       uses: actions/upload-artifact@v4
       with:
         name: kernelsu_rmx3760

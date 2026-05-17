@@ -112,6 +112,21 @@ adb shell su -c id  # Will show "Accessed denied" until granted
 - Open **Magisk** on phone → **Superuser** tab → Grant **Shell**
 - Or: `adb shell /data/local/tmp/magisk/magisk --sqlite "UPDATE policies SET policy=2 WHERE package_name='com.android.shell'"`
 
+## Kernel Source Notes
+- **`kernel_source/`** = Realme GPL source (Linux **5.4.254**) — WRONG version, device runs 5.15.178
+- **`kernel_ack_5.15/`** = ACK android14-5.15 (**5.15.178-android13-8**) — correct base for KernelSU LKM build
+- The `.config` in repo root was dumped from device (5.15.178) — useful as reference only
+- Realme GPL source is Linux 5.4-based and CANNOT build a 5.15 kernel
+
+## KernelSU LKM Build
+- **Do NOT** use `kernel_source/` (it's 5.4, wrong architecture)
+- Build against `kernel_ack_5.15/` or fresh ACK android14-5.15 clone
+- GitHub Actions workflow: `.github/workflows/build_kernelsu_module.yml`
+- The `CONFIG_LOCALVERSION` must match device's exact UTS_RELEASE
+- To find device vermagic: `adb shell 'cat /proc/version | grep -o "5\.15\.[^ ]*"'`
+- Build with `CONFIG_LOCALVERSION_AUTO=n` for a clean `5.15.178-android13-8` vermagic
+- Fallback: `insmod -f kernelsu.ko` forces load despite vermagic mismatch
+
 ## Notes for AI
 - Use `export MSYS2_ARG_CONV_EXCL="*"` before ALL adb commands on Git Bash
 - `adb pull` from `/sdcard` needs `//sdcard/` prefix (double slash)

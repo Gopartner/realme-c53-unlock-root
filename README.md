@@ -137,7 +137,20 @@ adb shell su -c id
 
 ### 7. Root with KernelSU (LKM)
 
-Requires building `kernelsu.ko` from kernel source (see `scripts/root_kernelsu.sh`).
+1. Build `kernelsu.ko` via GitHub Actions:
+   ```
+   https://github.com/Gopartner/realme-c53-unlock-root/actions
+   # Run "Build KernelSU LKM" workflow -> download artifact
+   ```
+2. Place `kernelsu.ko` in repo root
+3. Run:
+   ```
+   ./scripts/root_kernelsu.sh
+   ```
+Or use the CLI (option 6).
+
+**Note:** KernelSU is in LKM (Loadable Kernel Module) mode. The `kernelsu.ko`
+must match the device kernel vermagic exactly. See AGENTS.md for details.
 
 ## Partition Layout
 
@@ -154,13 +167,15 @@ Full layout in `files/partition_layout.txt`.
 
 ## Kernel Source
 
+Realme GPL source (in `kernel_source/`):
 ```
 https://github.com/realme-kernel-opensource/realme_C51_C53_Note50_C60_C51_N53-AndroidU-kernel-source
 ```
 
-Note: Contains `drivers/gpu/drm/nouveau/nvkm/subdev/i2c/aux.c` and
-`include/soc/arc/aux.h` which are reserved filenames on Windows.
-Use WSL/Linux to clone.
+**⚠️ Note:** This GPL source is Linux **5.4.254**, but the device runs **5.15.178**.
+The `.config` in this repo was dumped from the device as a reference only.
+
+For KernelSU LKM builds, use ACK android14-5.15 (`kernel_ack_5.15/`) instead.
 
 ## Credits
 

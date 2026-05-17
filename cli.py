@@ -61,7 +61,6 @@ def menu():
 +----------------------------------------+
 |  Realme C53 (RMX3760) Unlock & Root    |
 +----------------------------------------+
-|  NEW - STILL IN DEVELOPMENT            |
 |  NOT YET TESTED - USE AT YOUR OWN RISK |
 +----------------------------------------+
 """)
@@ -70,7 +69,8 @@ def menu():
     print("3) Unlock bootloader")
     print("4) Dump stock boot image")
     print("5) Root with Magisk")
-    print("6) Verify root access")
+    print("6) Root with KernelSU (LKM)")
+    print("7) Verify root access")
     print("q) Quit")
     return input("\nSelect: ").strip()
 
@@ -251,6 +251,90 @@ def cmd_root():
 """)
 
 
+def cmd_root_kernelsu():
+    print("\n=== Root with KernelSU (LKM) ===")
+    print(" NOTE: Requires pre-built kernelsu.ko")
+    print(" Build it via GitHub Actions:")
+    print("   https://github.com/Gopartner/realme-c53-unlock-root/actions")
+    print("   -> Run 'Build KernelSU LKM' workflow -> download artifact")
+    print("")
+
+    stock_boot = REPO_ROOT / "stock_boot.img"
+    kernelsu_ko = REPO_ROOT / "kernelsu.ko"
+
+    if not stock_boot.exists():
+        print(" ! stock_boot.img not found. Run option 4 first.")
+        return
+    if not kernelsu_ko.exists():
+        print(" ! kernelsu.ko not found.")
+        print("   Place kernelsu.ko in the repo root directory.")
+        return
+    if not check_adb():
+        print(" ! Phone not detected.")
+        return
+
+    print("[1/5] Pushing files to phone...")
+    adb("shell mkdir -p /data/local/tmp/ksu")
+    adb(f'push "{stock_boot}" /data/local/tmp/boot.img')
+    adb(f'push "{kernelsu_ko}" /data/local/tmp/ksu/kernelsu.ko')
+
+    print("[2/5] Extracting magiskboot from Magisk APK...")
+    magisk_apk = APK / "Magisk-v30.7.apk"
+    if magisk_apk.exists():
+        import zipfile
+        tmp_dir = REPO_ROOT / "tmp_ksu"
+        tmp_dir.mkdir(exist_ok=True)
+        with zipfile.ZipFile(magisk_apk, "r") as z:
+            z.extract("lib/arm64-v8a/libmagiskboot.so", tmp_dir)
+        adb(f'push "{tmp_dir / "lib/arm64-v8a/libmagiskboot.so"}" /data/local/tmp/magiskboot')
+        adb("shell chmod 755 /data/local/tmp/magiskboot")
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    print("[3/5] Patching boot image with KernelSU...")
+    ksud_path = REPO_ROOT / "ksud"
+    if not ksud_path.exists():
+        print(" Downloading ksud...")
+        import urllib.request
+        try:
+            url = "https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.2.0/ksud-aarch64-linux-android"
+            urllib.request.urlretrieve(url, ksud_path)
+            os.chmod(ksud_path, 0o755)
+        except Exception as e:
+            print(f" ! Download failed: {e}")
+            return
+
+    adb(f'push "{ksud_path}" /data/local/tmp/ksud')
+    adb("shell chmod 755 /data/local/tmp/ksud")
+
+    adb("shell /data/local/tmp/ksud boot-patch "
+        "-b /data/local/tmp/boot.img "
+        "-m /data/local/tmp/ksu/kernelsu.ko "
+        "--magiskboot /data/local/tmp/magiskboot "
+        "-o /data/local/tmp/ "
+        "--out-name kernelsu_patched_boot.img")
+
+    print("[4/5] Pulling patched boot image...")
+    patched = REPO_ROOT / "kernelsu_patched_boot.img"
+    adb(f'pull /data/local/tmp/kernelsu_patched_boot.img "{patched}"')
+
+    print("[5/5] Flashing patched boot to both slots...")
+    adb("reboot bootloader", "Reboot to fastboot")
+    __import__("time").sleep(3)
+    fastboot(f'flash boot_a "{patched}"', "Flash boot_a")
+    fastboot(f'flash boot_b "{patched}"', "Flash boot_b")
+    fastboot("reboot", "Reboot")
+
+    print("""
+ Done! After phone reboots:
+   1. Install KernelSU Next APK:
+      adb install tools/apk/KernelSU_Next.apk
+   2. Open KernelSU Next app -> Grant root to Shell.
+
+ Verify: adb shell lsmod | grep kernelsu
+         adb shell su -c id  ->  uid=0(root)
+""")
+
+
 def cmd_verify():
     print("\n=== Verify Root Access ===")
     if not check_adb():
@@ -261,7 +345,7 @@ def cmd_verify():
     if "uid=0" in output:
         print(" ROOT CONFIRMED: uid=0(root)")
     elif "su: inaccessible" in output:
-        print(" Not rooted. Open Magisk app and grant root to Shell.")
+        print(" Not rooted. Open root app and grant root to Shell.")
     else:
         print(f" Response: {output.strip()}")
 
@@ -280,6 +364,8 @@ def main():
         elif choice == "5":
             cmd_root()
         elif choice == "6":
+            cmd_root_kernelsu()
+        elif choice == "7":
             cmd_verify()
         elif choice.lower() == "q":
             print("bye.")
