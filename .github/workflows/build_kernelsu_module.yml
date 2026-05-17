@@ -58,9 +58,11 @@ jobs:
         cd kernel_source
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
 
-    - name: Build KernelSU module only
+    - name: Generate selinux flask.h and build KernelSU module
       run: |
         cd kernel_source
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig scripts prepare
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- security/selinux/flask.h
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-unused-value" M=drivers/kernelsu modules
 
     - name: Check built module
