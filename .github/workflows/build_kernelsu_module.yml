@@ -61,7 +61,13 @@ jobs:
     - name: Build KernelSU module
       run: |
         cd kernel_source
-        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- M=KernelSU modules
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules
+
+    - name: Build kernel (needed for Module.symvers)
+      if: false
+      run: |
+        cd kernel_source
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) Image modules
 
     - name: Check built module
       run: |
