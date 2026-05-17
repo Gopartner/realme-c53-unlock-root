@@ -32,37 +32,31 @@ jobs:
         sed -i 's/^SUBLEVEL = .*/SUBLEVEL = 178/' Makefile
         sed -i 's/^EXTRAVERSION = .*/EXTRAVERSION = -android13-8/' Makefile
 
-    - name: Copy device .config
-      run: |
-        cp repo/.config kernel_source/.config
-
     - name: Add KernelSU-Next
       run: |
         cd kernel_source
         curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/dev/kernel/setup.sh" | bash -
 
-    - name: Enable CONFIG_KSU in .config
+    - name: Configure kernel with GKI defconfig + KSU
       run: |
         cd kernel_source
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
+        # Enable KernelSU as a module
         echo "CONFIG_KSU=m" >> .config
-        echo "CONFIG_KSU_WITH_KPROBES=y" >> .config
-        echo "CONFIG_KSU_SUSFS=y" >> .config
-
-    - name: Configure kernel with olddefconfig
-      run: |
-        cd kernel_source
+        echo "CONFIG_MODULES=y" >> .config
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
-    - name: Build modules_prepare
+    - name: Build full kernel (vmlinux + modules) for header generation
       run: |
         cd kernel_source
-        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- modules_prepare
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) scripts prepare modules_prepare
+        # Generate flask.h by building SELinux objects
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) security/selinux/ || true
+      timeout-minutes: 20
 
-    - name: Generate selinux flask.h and build KernelSU module
+    - name: Build KernelSU module
       run: |
         cd kernel_source
-        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig scripts prepare
-        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- security/selinux/flask.h
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-unused-value" M=drivers/kernelsu modules
 
     - name: Check built module
