@@ -23,3 +23,33 @@ toolchain.tar.gz
 toolchain/
 
 *.img
+
+# Build outputs
+output/
+release/
+
+# Downloads
+downloads/
+
+# Boot images
+*.img
+
+# Kernel modules
+*.ko
+
+# Archives
+*.zip
+*.tar.gz
+*.tar.xz
+*.tar.bz2
+
+# Logs
+*.log
+
+# Temp
+tmp/
+.cache/
+
+# Python
+__pycache__/
+*.pyc
