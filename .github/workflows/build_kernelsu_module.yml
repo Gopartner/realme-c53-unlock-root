@@ -112,3 +112,18 @@ jobs:
         name: kernelsu_rmx3760
         path: kernel_source/drivers/kernelsu/kernelsu.ko
         if-no-files-found: error
+
+    - name: Create GitHub Release
+      if: github.event_name == 'workflow_dispatch'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        LOCALVER="${{ inputs.localversion || 'clean' }}"
+        TAG_NAME="kernelsu-$(date +'%Y%m%d-%H%M%S')"
+        gh release create "$TAG_NAME" \
+          --repo "${{ github.repository }}" \
+          --title "KernelSU LKM $TAG_NAME" \
+          --notes "KernelSU LKM for Realme C53 (RMX3760)
+        - Kernel: 5.15.178-android13-8
+        - Vermagic suffix: $LOCALVER" \
+          kernel_source/drivers/kernelsu/kernelsu.ko
