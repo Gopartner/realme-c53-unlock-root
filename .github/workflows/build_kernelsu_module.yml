@@ -32,15 +32,17 @@ jobs:
         sed -i 's/^SUBLEVEL = .*/SUBLEVEL = 178/' Makefile
         sed -i 's/^EXTRAVERSION = .*/EXTRAVERSION = -android13-8/' Makefile
 
-    - name: Add KernelSU-Next source (not in-tree — built as external module)
+    - name: Add KernelSU-Next source (Kconfig only — not in Makefile)
       run: |
         cd kernel_source
         git clone --depth 1 --branch dev https://github.com/KernelSU-Next/KernelSU-Next.git
         mkdir -p drivers/kernelsu
         cp -r KernelSU-Next/kernel/* drivers/kernelsu/
         cp -r KernelSU-Next/uapi drivers/kernelsu/
-        # Do NOT add to drivers/Makefile — we build KSU as external module
-        # after the full kernel is built (avoids flask.h generation race)
+        # Add Kconfig only (so CONFIG_KSU=m survives olddefconfig)
+        # Do NOT add to drivers/Makefile — builds as external module after full kernel
+        grep -q "source \"drivers/kernelsu/Kconfig\"" drivers/Kconfig || \
+          sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' drivers/Kconfig
 
     - name: Configure kernel with GKI defconfig + KSU symbol
       run: |
