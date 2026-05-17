@@ -32,38 +32,36 @@ jobs:
         sed -i 's/^SUBLEVEL = .*/SUBLEVEL = 178/' Makefile
         sed -i 's/^EXTRAVERSION = .*/EXTRAVERSION = -android13-8/' Makefile
 
-    - name: Add KernelSU-Next
+    - name: Add KernelSU-Next source (not in-tree — built as external module)
       run: |
         cd kernel_source
-        # Clone KernelSU-Next
         git clone --depth 1 --branch dev https://github.com/KernelSU-Next/KernelSU-Next.git
-        # Copy kernel source directly into drivers/kernelsu (avoids symlink issues)
         mkdir -p drivers/kernelsu
         cp -r KernelSU-Next/kernel/* drivers/kernelsu/
         cp -r KernelSU-Next/uapi drivers/kernelsu/
-        # Add to Kconfig and Makefile
-        echo "obj-\$(CONFIG_KSU) += kernelsu/" >> drivers/Makefile
-        grep -q "source \"drivers/kernelsu/Kconfig\"" drivers/Kconfig || \
-          sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' drivers/Kconfig
+        # Do NOT add to drivers/Makefile — we build KSU as external module
+        # after the full kernel is built (avoids flask.h generation race)
 
-    - name: Configure kernel with GKI defconfig + KSU
+    - name: Configure kernel with GKI defconfig + KSU symbol
       run: |
         cd kernel_source
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
-        # Enable KernelSU as module
+        # Add CONFIG_KSU=m so Module.symvers includes KSU symbols for external build
         echo "CONFIG_KSU=m" >> .config
-        echo "CONFIG_KPROBES=y" >> .config
-        echo "CONFIG_MODULES=y" >> .config
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
-    - name: Build full kernel + modules
+    - name: Build full kernel (generates Module.symvers, flask.h, etc.)
       run: |
         cd kernel_source
-        # Build SELinux first (serialized) to ensure flask.h is generated before KSU tries to include it
-        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- security/selinux/
-        # Build everything else in parallel
-        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-unused-value" -j$(nproc)
-      timeout-minutes: 35
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
+      timeout-minutes: 30
+
+    - name: Build kernelsu.ko as external module
+      run: |
+        cd kernel_source
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
+          KCFLAGS="-Wno-unused-value" \
+          M=drivers/kernelsu modules
 
     - name: Locate kernelsu.ko
       run: |
@@ -71,14 +69,10 @@ jobs:
 
     - name: Check built module
       run: |
-        echo "=== Searching for kernelsu.ko ==="
-        find kernel_source -name "kernelsu.ko" -type f 2>/dev/null | head -5
         KSU_KO=$(find kernel_source -name "kernelsu.ko" -type f 2>/dev/null | head -1)
         if [ -z "$KSU_KO" ]; then
           echo "kernelsu.ko not found!"
-          echo "=== drivers/kernelsu/ contents ==="
           ls -la kernel_source/drivers/kernelsu/ 2>/dev/null || echo "drivers/kernelsu/ does not exist"
-          echo "=== All .ko files ==="
           find kernel_source -name "*.ko" -type f 2>/dev/null | head -20
           exit 1
         fi
