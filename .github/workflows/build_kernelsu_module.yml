@@ -56,6 +56,12 @@ jobs:
         echo "CONFIG_MODULES=y" >> .config
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
+    - name: Pre-build genheaders -> flask.h (avoids race with KSU)
+      run: |
+        cd kernel_source
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- scripts/selinux/genheaders/genheaders
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- security/selinux/flask.h
+
     - name: Build full kernel + modules (generates all headers + Module.symvers)
       run: |
         cd kernel_source
