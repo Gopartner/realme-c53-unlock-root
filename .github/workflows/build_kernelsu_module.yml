@@ -39,7 +39,14 @@ jobs:
     - name: Add KernelSU-Next
       run: |
         cd kernel_source
-        curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/main/kernel/setup.sh" | bash -
+        curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/dev/kernel/setup.sh" | bash -
+
+    - name: Enable CONFIG_KSU in .config
+      run: |
+        cd kernel_source
+        echo "CONFIG_KSU=m" >> .config
+        echo "CONFIG_KSU_WITH_KPROBES=y" >> .config
+        echo "CONFIG_KSU_SUSFS=y" >> .config
 
     - name: Configure kernel with olddefconfig
       run: |
@@ -56,14 +63,20 @@ jobs:
         cd kernel_source
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- M=KernelSU modules
 
-    - name: Check module vermagic
+    - name: Check built module
       run: |
-        ls -lh kernel_source/KernelSU/kernelsu.ko
-        modinfo kernel_source/KernelSU/kernelsu.ko
+        KSU_KO=$(find kernel_source -name "kernelsu.ko" -type f 2>/dev/null | head -1)
+        if [ -z "$KSU_KO" ]; then
+          echo "kernelsu.ko not found!"
+          exit 1
+        fi
+        echo "Module: $KSU_KO"
+        modinfo "$KSU_KO"
+        ls -lh "$KSU_KO"
 
     - name: Upload module as artifact
       uses: actions/upload-artifact@v4
       with:
         name: kernelsu_rmx3760
-        path: kernel_source/KernelSU/kernelsu.ko
+        path: kernel_source/**/kernelsu.ko
         if-no-files-found: error
