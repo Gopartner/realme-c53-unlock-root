@@ -47,8 +47,9 @@ jobs:
     - name: Configure kernel with GKI defconfig + KSU symbol
       run: |
         cd kernel_source
-        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
-        # Add CONFIG_KSU=m so Module.symvers includes KSU symbols for external build
+        # Use GKI defconfig which has CONFIG_KPROBES=y and CONFIG_EXT4_FS=y (KSU dependencies)
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- gki_defconfig
+        # Add CONFIG_KSU=m so Module.symvers has KSU symbols for external module build
         echo "CONFIG_KSU=m" >> .config
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
