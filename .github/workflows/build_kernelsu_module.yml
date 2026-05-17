@@ -35,38 +35,50 @@ jobs:
     - name: Add KernelSU-Next
       run: |
         cd kernel_source
-        curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/dev/kernel/setup.sh" | bash -
+        # Clone KernelSU-Next
+        git clone --depth 1 --branch dev https://github.com/KernelSU-Next/KernelSU-Next.git
+        # Copy kernel source directly into drivers/kernelsu (avoids symlink issues)
+        mkdir -p drivers/kernelsu
+        cp -r KernelSU-Next/kernel/* drivers/kernelsu/
+        # Add to Kconfig and Makefile
+        echo "obj-\$(CONFIG_KSU) += drivers/kernelsu/" >> drivers/Makefile
+        grep -q "source \"drivers/kernelsu/Kconfig\"" drivers/Kconfig || \
+          sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' drivers/Kconfig
 
     - name: Configure kernel with GKI defconfig + KSU
       run: |
         cd kernel_source
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- defconfig
-        # Enable KernelSU as a module
+        # Enable KernelSU as module
         echo "CONFIG_KSU=m" >> .config
+        echo "CONFIG_KPROBES=y" >> .config
         echo "CONFIG_MODULES=y" >> .config
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
-    - name: Build full kernel (vmlinux + modules) for header generation
+    - name: Build full kernel + modules (generates all headers + Module.symvers)
       run: |
         cd kernel_source
-        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) scripts prepare modules_prepare
-        # Generate flask.h by building SELinux objects
-        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) security/selinux/ || true
-      timeout-minutes: 20
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-unused-value" -j$(nproc)
+      timeout-minutes: 30
 
-    - name: Build KernelSU module
+    - name: Locate kernelsu.ko
       run: |
-        cd kernel_source
-        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-unused-value" M=drivers/kernelsu modules
+        find kernel_source -name "kernelsu.ko" -type f 2>/dev/null | head -5
 
     - name: Check built module
       run: |
+        echo "=== Searching for kernelsu.ko ==="
+        find kernel_source -name "kernelsu.ko" -type f 2>/dev/null | head -5
         KSU_KO=$(find kernel_source -name "kernelsu.ko" -type f 2>/dev/null | head -1)
         if [ -z "$KSU_KO" ]; then
           echo "kernelsu.ko not found!"
+          echo "=== drivers/kernelsu/ contents ==="
+          ls -la kernel_source/drivers/kernelsu/ 2>/dev/null || echo "drivers/kernelsu/ does not exist"
+          echo "=== All .ko files ==="
+          find kernel_source -name "*.ko" -type f 2>/dev/null | head -20
           exit 1
         fi
-        echo "Module: $KSU_KO"
+        echo "Module found: $KSU_KO"
         modinfo "$KSU_KO"
         ls -lh "$KSU_KO"
 
@@ -74,5 +86,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: kernelsu_rmx3760
-        path: kernel_source/**/kernelsu.ko
+        path: kernel_source/drivers/kernelsu/kernelsu.ko
         if-no-files-found: error
