@@ -40,6 +40,7 @@ jobs:
         # Copy kernel source directly into drivers/kernelsu (avoids symlink issues)
         mkdir -p drivers/kernelsu
         cp -r KernelSU-Next/kernel/* drivers/kernelsu/
+        cp -r KernelSU-Next/uapi drivers/kernelsu/
         # Add to Kconfig and Makefile
         echo "obj-\$(CONFIG_KSU) += kernelsu/" >> drivers/Makefile
         grep -q "source \"drivers/kernelsu/Kconfig\"" drivers/Kconfig || \
