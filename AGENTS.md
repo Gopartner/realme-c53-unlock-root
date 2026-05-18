@@ -15,25 +15,25 @@
 # 1. Activate environment & set Git Bash fix
 export MSYS2_ARG_CONV_EXCL="*"
 
-# 2. BUILD patched images (developer — sekali saja atau setelah backup baru)
-python release/build_release.py --all
+# 2. BUILD KernelSU boot image (developer — sekali saja atau setelah backup baru)
+python release/build_release.py --kernelsu downloads/kernelsu.ko --stock output/backup/stock_boot_*.img
 
 # 3. Verifikasi artifact sebelum flash
 python release/build/verify_release.py
 
 # 4. Jalankan CLI tool (end-user)
 python cli.py
-# Menu: 1) check env → 2) validate device → 3) backup → 4) driver → 5/6) flash → 7) verify
+# Menu: 1) check env → 2) validate device → 3) backup → 4) driver → 5) flash KernelSU → 7) verify
 ```
 
 ### Alur kerja utama
 
 | Siapa | Perintah | Apa yang terjadi |
 |-------|----------|-----------------|
-| **Developer** | `python release/build_release.py --all` | Ambil stock boot dari `output/backup/`, patch dengan Magisk & KernelSU, simpan ke `release/runtime/` + `metadata.txt` |
+| **Developer** | `python release/build_release.py --kernelsu kernelsu.ko --stock ...` | Patch stock boot dengan KernelSU LKM, simpan ke `release/runtime/` + `metadata.txt` |
 | **Developer** | `python release/build/verify_release.py` | Cek SHA256 semua artifact di `release/runtime/` cocok dengan `metadata.txt` |
-| **End-user** | `python cli.py` → pilih 5 atau 6 | Flash image yang sudah di-build (test-boot dulu untuk KernelSU) |
-| **Pertama kali buka repo** | `pip install -e .` atau langsung `python cli.py` | Python stdlib only, no dependencies |
+| **End-user** | `python cli.py` → pilih 5 | Flash KernelSU image (test-boot dulu, baru commit) |
+| **Pertama kali buka repo** | `python cli.py` | Python stdlib only, no dependencies |
 
 ## Working Directory
 ```

@@ -1,27 +1,25 @@
-import time
 import os
 
-from .config import RUNTIME_IMAGES, RUNTIME_DIR, METADATA_FILE
-from .adb import adb, fastboot, reboot_bootloader, wait_for_fastboot, wait_for_device
+from .config import RUNTIME_IMAGE, METADATA_FILE
+from .adb import adb, fastboot, reboot_bootloader, wait_for_fastboot
 from .validation import verify_release_file, verify_checksum
 from .metadata import get_checksum, parse_metadata, display_metadata
-from .exceptions import ReleaseFileMissing, ChecksumMismatch, FlashError
+from .exceptions import ReleaseFileMissing, FlashError
 from .logger import get_logger
 
 log = get_logger()
 
 
-def _verify_image(image_path: str, name: str) -> bool:
+def _verify_image(image_path: str):
     if not verify_release_file(image_path):
-        raise ReleaseFileMissing(f"{name} image not found: {image_path}")
+        raise ReleaseFileMissing(f"Image not found: {image_path}")
     if METADATA_FILE.exists():
         meta = parse_metadata()
         expected = get_checksum(os.path.basename(image_path), meta)
         if expected:
-            print(f"Verifying checksum for {name}...")
+            print("Verifying checksum...")
             verify_checksum(image_path, expected)
             print("[OK] Checksum verified")
-    return True
 
 
 def _flash_both_slots(image_path: str):
@@ -35,8 +33,8 @@ def _flash_both_slots(image_path: str):
 
 def flash_kernelsu():
     print("\n=== Flash KernelSU Boot ===")
-    image = str(RUNTIME_IMAGES["kernelsu"])
-    _verify_image(image, "KernelSU")
+    image = str(RUNTIME_IMAGE)
+    _verify_image(image)
     display_metadata()
     print("\nRebooting to fastboot...")
     reboot_bootloader()
@@ -60,21 +58,6 @@ Done.
 Install APK:
   adb install tools/apk/KernelSU_Next.apk
 """)
-
-
-def flash_magisk():
-    print("\n=== Flash Magisk Boot ===")
-    image = str(RUNTIME_IMAGES["magisk"])
-    _verify_image(image, "Magisk")
-    display_metadata()
-    print("\nRebooting to fastboot...")
-    reboot_bootloader()
-    if not wait_for_fastboot():
-        raise FlashError("Device did not enter fastboot mode")
-    _flash_both_slots(image)
-    print("\nRebooting...")
-    fastboot("reboot")
-    print("\nDone")
 
 
 def verify_root():

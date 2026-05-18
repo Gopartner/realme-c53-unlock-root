@@ -1,7 +1,7 @@
 from .validation import check_environment, validate_device
 from .backup import backup_boot
 from .driver import install_driver
-from .flash import flash_kernelsu, flash_magisk, verify_root
+from .flash import flash_kernelsu, verify_root
 from .metadata import display_metadata, parse_metadata
 from .logger import get_logger
 
@@ -21,9 +21,8 @@ def menu() -> str:
   3) Backup stock boot image
   4) Install SPD driver
   5) Flash KernelSU (with test-boot)
-  6) Flash Magisk
-  7) Verify root access
-  8) Show release metadata
+  6) Verify root access
+  7) Show release metadata
 
   q) Quit
 """)
@@ -46,10 +45,8 @@ def main():
             elif choice == "5":
                 flash_kernelsu()
             elif choice == "6":
-                flash_magisk()
-            elif choice == "7":
                 verify_root()
-            elif choice == "8":
+            elif choice == "7":
                 try:
                     display_metadata(parse_metadata())
                 except Exception as e:
