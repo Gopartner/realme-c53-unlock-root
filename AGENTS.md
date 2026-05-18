@@ -9,6 +9,32 @@
 - **Arch**: aarch64, ARM Cortex-A55 (6x) + A78 (2x)
 - **Slots**: A/B (`boot_a`/`boot_b`, `init_boot_a`/`init_boot_b`)
 
+## Quickstart (Jangan lupa!)
+
+```bash
+# 1. Activate environment & set Git Bash fix
+export MSYS2_ARG_CONV_EXCL="*"
+
+# 2. BUILD patched images (developer — sekali saja atau setelah backup baru)
+python release/build_release.py --all
+
+# 3. Verifikasi artifact sebelum flash
+python release/build/verify_release.py
+
+# 4. Jalankan CLI tool (end-user)
+python cli.py
+# Menu: 1) check env → 2) validate device → 3) backup → 4) driver → 5/6) flash → 7) verify
+```
+
+### Alur kerja utama
+
+| Siapa | Perintah | Apa yang terjadi |
+|-------|----------|-----------------|
+| **Developer** | `python release/build_release.py --all` | Ambil stock boot dari `output/backup/`, patch dengan Magisk & KernelSU, simpan ke `release/runtime/` + `metadata.txt` |
+| **Developer** | `python release/build/verify_release.py` | Cek SHA256 semua artifact di `release/runtime/` cocok dengan `metadata.txt` |
+| **End-user** | `python cli.py` → pilih 5 atau 6 | Flash image yang sudah di-build (test-boot dulu untuk KernelSU) |
+| **Pertama kali buka repo** | `pip install -e .` atau langsung `python cli.py` | Python stdlib only, no dependencies |
+
 ## Working Directory
 ```
 D:\realme-c53-unlock-root\
