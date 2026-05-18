@@ -23,7 +23,16 @@ python release/build_release.py --magisk tools/apk/Magisk-v30.7.apk --stock outp
 # 3. Verifikasi artifact sebelum flash
 python release/build/verify_release.py
 
-# 4. Jalankan CLI tool (end-user)
+# 4. GitHub Actions akan build + package Release lengkap:
+#    - kernelsu.ko
+#    - kernelsu_patched_boot.img (jika stock_boot_url diisi)
+#    - tools/unlock/ (CVE-2022-38694)
+#    - tools/apk/KernelSU_Next.apk
+#    - flash.bat / flash.sh
+#    - README.txt
+#    Semua di-zip jadi satu file: RMX3760_KernelSU_Release.zip
+
+# 5. Jalankan CLI tool (end-user)
 python cli.py
 # Menu: 1) check env → 2) validate device → 3) backup → 4) driver → 5) unlock → 6) flash KernelSU → 7) verify
 ```
