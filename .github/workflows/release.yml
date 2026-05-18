@@ -1,6 +1,16 @@
 name: Build RMX3760 Release
 run-name: Build KernelSU Release for RMX3760
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      localversion:
+        description: Extra vermagic suffix
+        required: false
+        default: ''
+      stock_boot_url:
+        description: URL to stock boot.img
+        required: false
+        default: ''
 jobs:
   build:
     runs-on: ubuntu-latest
