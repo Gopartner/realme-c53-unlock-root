@@ -19,10 +19,14 @@ DEVICE_KERNEL = "5.15.178-android13-8"
 DEVICE_ANDROID = "15 (AP3A.240905.015.A2)"
 DEVICE_SLOTS = ["boot_a", "boot_b"]
 
+MAGISK_APK = APK_DIR / "Magisk-v30.7.apk"
 KERNELSU_APK = APK_DIR / "KernelSU_Next.apk"
 DRIVER_ZIP = DRIVER_DIR / "SPD_Driver_R4.20.4201.zip"
 
-RUNTIME_IMAGE = RUNTIME_DIR / "kernelsu_patched_boot.img"
+RUNTIME_IMAGES = {
+    "magisk": RUNTIME_DIR / "magisk_patched_boot.img",
+    "kernelsu": RUNTIME_DIR / "kernelsu_patched_boot.img",
+}
 
 METADATA_FILE = RUNTIME_DIR / "metadata.txt"
 

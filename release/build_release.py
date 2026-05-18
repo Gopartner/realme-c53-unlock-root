@@ -8,7 +8,9 @@ No live patching on user devices — all patching happens here.
 Output goes to release/runtime/ with checksums in metadata.txt.
 
 Usage:
-    python release/build_release.py --kernelsu path/to/kernelsu.ko --stock path/to/stock_boot.img
+    python release/build_release.py --magisk tools/apk/Magisk-v30.7.apk --stock ...
+    python release/build_release.py --kernelsu kernelsu.ko --stock ...
+    python release/build_release.py --all
 """
 
 import argparse
@@ -17,12 +19,13 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import urllib.request
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-RUNTIME_DIR = REPO_ROOT / "release" / "runtime"
 RUNTIME_DIR = REPO_ROOT / "release" / "runtime"
 BACKUP_DIR = REPO_ROOT / "output" / "backup"
 
@@ -67,6 +70,58 @@ def find_stock_boot() -> Optional[Path]:
     return None
 
 
+def build_magisk(stock_path: str, magisk_apk: str):
+    log("=== Building Magisk-patched boot image ===")
+    RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+    output = os.path.join(RUNTIME_DIR, "magisk_patched_boot.img")
+    tmp = "/data/local/tmp/build_magisk"
+    adb(f"shell rm -rf {tmp}")
+    adb(f"shell mkdir -p {tmp}/magisk")
+    log("Pushing stock boot...")
+    adb(f'push "{stock_path}" {tmp}/boot.img')
+    log("Extracting and pushing Magisk binaries...")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        import zipfile
+        with zipfile.ZipFile(magisk_apk, "r") as z:
+            members = [
+                "assets/boot_patch.sh", "assets/util_functions.sh",
+                "lib/arm64-v8a/libmagiskboot.so",
+                "lib/arm64-v8a/libmagiskinit.so",
+                "lib/arm64-v8a/libmagisk.so",
+                "lib/arm64-v8a/libmagiskpolicy.so",
+                "lib/arm64-v8a/libbusybox.so",
+                "lib/arm64-v8a/libinit-ld.so",
+            ]
+            for m in members:
+                try:
+                    z.extract(m, tmpdir)
+                except KeyError:
+                    log(f"  [WARN] {m} not found")
+        so_dir = os.path.join(tmpdir, "lib", "arm64-v8a")
+        if os.path.isdir(so_dir):
+            rename = {"libmagiskboot.so": "magiskboot", "libmagiskinit.so": "magiskinit",
+                       "libmagisk.so": "magisk", "libmagiskpolicy.so": "magiskpolicy",
+                       "libbusybox.so": "busybox", "libinit-ld.so": "init-ld"}
+            for old, new in rename.items():
+                src = os.path.join(so_dir, old)
+                if os.path.exists(src):
+                    dst = os.path.join(tmpdir, "assets" if new == "magiskboot" else tmpdir, new)
+                    shutil.copy2(src, dst)
+                    os.chmod(dst, 0o755)
+            shutil.rmtree(so_dir)
+        for root, dirs, files in os.walk(tmpdir):
+            for f in files:
+                fp = os.path.join(root, f)
+                adb(f'push "{fp}" {tmp}/magisk/{f}')
+    adb(f"shell chmod 755 {tmp}/magisk/*")
+    log("Running boot_patch.sh...")
+    adb(f"shell sh {tmp}/magisk/boot_patch.sh {tmp}/boot.img")
+    adb(f'pull {tmp}/magisk/new-boot.img "{output}"')
+    adb(f"shell rm -rf {tmp}")
+    log(f"[OK] Magisk image: {output}")
+    return output
+
+
 def build_kernelsu(stock_path: str, kernelsu_ko_path: str):
     log("=== Building KernelSU-patched boot image ===")
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
@@ -80,7 +135,6 @@ def build_kernelsu(stock_path: str, kernelsu_ko_path: str):
     ksud_local = shutil.which("ksud") or (REPO_ROOT / "ksud")
     if not os.path.exists(str(ksud_local)):
         log("Downloading ksud for KernelSU boot-patch...")
-        import urllib.request
         url = ("https://github.com/KernelSU-Next/KernelSU-Next/"
                "releases/download/v3.2.0/ksud-aarch64-linux-android")
         ksud_local = os.path.join(RUNTIME_DIR, "ksud")
@@ -125,17 +179,45 @@ def write_metadata(artifacts: dict):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Build KernelSU release for RMX3760")
-    parser.add_argument("--kernelsu", required=True, help="Path to kernelsu.ko")
+    parser = argparse.ArgumentParser(description="Build release artifacts for RMX3760")
+    parser.add_argument("--magisk", help="Path to Magisk APK")
+    parser.add_argument("--kernelsu", help="Path to kernelsu.ko")
     parser.add_argument("--stock", help="Path to stock boot image")
+    parser.add_argument("--all", action="store_true", help="Build everything available")
     args = parser.parse_args()
-    stock = args.stock or find_stock_boot()
-    if not stock:
-        log("[ERROR] No stock boot image. Use --stock.")
-        sys.exit(1)
-    kernelsu_ko = os.path.abspath(args.kernelsu)
-    if not os.path.exists(kernelsu_ko):
-        log(f"[ERROR] kernelsu.ko not found: {kernelsu_ko}")
-        sys.exit(1)
-    image = build_kernelsu(str(stock), kernelsu_ko)
-    write_metadata({"kernelsu_patched_boot.img": image})
+
+    if args.all:
+        stock = args.stock or find_stock_boot()
+        if not stock:
+            log("[ERROR] No stock boot image. Use --stock.")
+            sys.exit(1)
+        images = {}
+        magisk_apk = str(REPO_ROOT / "tools" / "apk" / "Magisk-v30.7.apk")
+        if os.path.exists(magisk_apk):
+            images["magisk_patched_boot.img"] = build_magisk(str(stock), magisk_apk)
+        else:
+            log(f"[SKIP] Magisk APK not found: {magisk_apk}")
+        kernelsu_ko = str(REPO_ROOT / "kernelsu.ko")
+        if os.path.exists(kernelsu_ko):
+            images["kernelsu_patched_boot.img"] = build_kernelsu(str(stock), kernelsu_ko)
+        else:
+            log(f"[SKIP] kernelsu.ko not found: {kernelsu_ko}")
+        if images:
+            write_metadata(images)
+        else:
+            log("[ERROR] Nothing to build")
+            sys.exit(1)
+    else:
+        stock = args.stock or find_stock_boot()
+        if not stock:
+            log("[ERROR] No stock boot image. Use --stock.")
+            sys.exit(1)
+        images = {}
+        if args.magisk:
+            images["magisk_patched_boot.img"] = build_magisk(str(stock), os.path.abspath(args.magisk))
+        if args.kernelsu:
+            images["kernelsu_patched_boot.img"] = build_kernelsu(str(stock), os.path.abspath(args.kernelsu))
+        if not images:
+            parser.print_help()
+            sys.exit(1)
+        write_metadata(images)

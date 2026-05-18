@@ -1,6 +1,6 @@
 import os
 
-from .config import RUNTIME_IMAGE, METADATA_FILE
+from .config import RUNTIME_IMAGES, METADATA_FILE
 from .adb import adb, fastboot, reboot_bootloader, wait_for_fastboot
 from .validation import verify_release_file, verify_checksum
 from .metadata import get_checksum, parse_metadata, display_metadata
@@ -33,7 +33,7 @@ def _flash_both_slots(image_path: str):
 
 def flash_kernelsu():
     print("\n=== Flash KernelSU Boot ===")
-    image = str(RUNTIME_IMAGE)
+    image = str(RUNTIME_IMAGES["kernelsu"])
     _verify_image(image)
     display_metadata()
     print("\nRebooting to fastboot...")
@@ -57,6 +57,26 @@ Done.
 
 Install APK:
   adb install tools/apk/KernelSU_Next.apk
+""")
+
+
+def flash_magisk():
+    print("\n=== Flash Magisk Boot ===")
+    image = str(RUNTIME_IMAGES["magisk"])
+    _verify_image(image)
+    display_metadata()
+    print("\nRebooting to fastboot...")
+    reboot_bootloader()
+    if not wait_for_fastboot():
+        raise FlashError("Device did not enter fastboot mode")
+    _flash_both_slots(image)
+    print("\nRebooting...")
+    fastboot("reboot")
+    print("""
+Done.
+
+Install APK:
+  adb install tools/apk/Magisk-v30.7.apk
 """)
 
 

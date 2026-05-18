@@ -15,8 +15,10 @@
 # 1. Activate environment & set Git Bash fix
 export MSYS2_ARG_CONV_EXCL="*"
 
-# 2. BUILD KernelSU boot image (developer — sekali saja atau setelah backup baru)
+# 2. BUILD KernelSU/Magisk boot image (developer — sekali saja atau setelah backup baru)
 python release/build_release.py --kernelsu downloads/kernelsu.ko --stock output/backup/stock_boot_*.img
+python release/build_release.py --magisk tools/apk/Magisk-v30.7.apk --stock output/backup/stock_boot_*.img
+# Atau build semua: python release/build_release.py --all
 
 # 3. Verifikasi artifact sebelum flash
 python release/build/verify_release.py
@@ -31,9 +33,11 @@ python cli.py
 | Siapa | Perintah | Apa yang terjadi |
 |-------|----------|-----------------|
 | **Developer** | `python release/build_release.py --kernelsu kernelsu.ko --stock ...` | Patch stock boot dengan KernelSU LKM, simpan ke `release/runtime/` + `metadata.txt` |
+| **Developer** | `python release/build_release.py --magisk Magisk-v30.7.apk --stock ...` | Patch stock boot dengan Magisk, simpan ke `release/runtime/` + `metadata.txt` |
 | **Developer** | `python release/build/verify_release.py` | Cek SHA256 semua artifact di `release/runtime/` cocok dengan `metadata.txt` |
 | **End-user** | `python cli.py` → pilih 5 | Unlock bootloader via CVE-2022-38694 (SPRD diag mode) |
 | **End-user** | `python cli.py` → pilih 6 | Flash KernelSU image (test-boot dulu, baru commit) |
+| **End-user** | `python cli.py` → pilih 7 | Flash Magisk image (langsung flash kedua slot) |
 | **Pertama kali buka repo** | `python cli.py` | Python stdlib only, no dependencies |
 
 ## Working Directory
