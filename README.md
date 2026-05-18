@@ -2,7 +2,10 @@
 
 [**English**](#) | [Bahasa Indonesia](README.id.md)
 
-**Build your own KernelSU module via GitHub Actions, unlock bootloader, and root your Realme C53 or other Realme devices.**
+**Unlock bootloader and root your Realme C53 (and other Realme devices). Supports KernelSU, Magisk, or a hybrid of both.**
+
+> ⚠️ **RMX3760 (Unisoc T612) users**: KSU-only is currently broken due to a ksud init bug.
+> **Hybrid Magisk v27 + KernelSU module via Magisk module** is the stable solution. See [docs/KSU_INIT_BUG.md](docs/KSU_INIT_BUG.md).
 
 Every GitHub release you create on your own fork is YOUR personal build — save it and reuse it anytime you need to root again on the same device.
 
@@ -31,9 +34,9 @@ Don't have Python? Download the **Release ZIP** instead — it includes flash sc
 ```
 You fork this repo
   → Run GitHub Actions (builds kernelsu.ko for YOUR device)
-  → GitHub creates a Release with the .ko file
-  → Download the Release artifact
-  → Flash to your phone
+     OR use a pre-built Release
+  → Unlock bootloader (CVE-2022-38694 for SPRD/Unisoc)
+  → Flash KernelSU, Magisk, or hybrid root
   → Done. Keep the Release for future use.
 ```
 
@@ -48,8 +51,8 @@ No need to set up a kernel build environment. Everything runs in GitHub's cloud.
 If someone has already built for the same device/kernel, just download their Release:
 
 ```
-Download kernelsu.ko from an existing GitHub Release
-  → Place it in downloads/kernelsu.ko
+Download Release ZIP or kernelsu.ko from an existing GitHub Release
+  → Place kernelsu.ko in downloads/kernelsu.ko
   → Follow "Quick Start" from Step 2
 ```
 
@@ -120,6 +123,28 @@ Phone will factory reset. Set up Android, enable USB debugging.
 
 ### Step 4 — Build & Flash
 
+Choose your root method:
+
+**Option A — Hybrid Magisk + KernelSU (Recommended for RMX3760)**
+```bash
+# 1. Download Magisk v27.0 APK to tools/apk/
+# 2. Extract and run boot_patch.sh on-device, or use Magisk app to patch stock boot
+# 3. Flash patched boot to both slots:
+adb reboot bootloader
+fastboot flash boot_a magisk_patched_boot.img
+fastboot flash boot_b magisk_patched_boot.img
+fastboot reboot
+
+# 4. Install ksu_loader Magisk module:
+#    Push tools/modules/ksu_loader/ksu_loader_v2.zip to phone
+#    Open Magisk app → Modules → Install from storage → select the zip
+#    Reboot
+
+# 5. Install KernelSU Next APK for KSU app root management
+adb install tools/apk/KernelSU_Next.apk
+```
+
+**Option B — KernelSU LKM (Test-boot safety)**
 ```bash
 # Backup stock boot from your phone
 python cli.py       # select menu 3
@@ -132,6 +157,14 @@ python release/build/verify_release.py
 
 # Flash to phone (test-boot first)
 python cli.py       # select menu 6
+```
+
+**Option C — Magisk only (Direct flash)**
+```bash
+# Use Magisk app to patch stock boot, then:
+fastboot flash boot_a magisk_patched_boot.img
+fastboot flash boot_b magisk_patched_boot.img
+fastboot reboot
 ```
 
 ### Step 5 — Verify Root
@@ -148,11 +181,17 @@ adb shell su -c id  # should show uid=0(root)
 
 Your GitHub Release is tied to your fork and your phone. If you ever need to root again (after OTA update, factory reset, etc.):
 
+**KernelSU root:**
 1. Go to your fork's Releases page
 2. Download the same `kernelsu.ko`
 3. Backup fresh stock boot: `python cli.py` → menu 3
 4. Rebuild: `python release/build_release.py --kernelsu kernelsu.ko --stock output/backup/stock_boot_*.img`
 5. Flash: `python cli.py` → menu 6
+
+**Hybrid Magisk+KSU root:**
+1. Follow Step 4 Option A — re-patch stock boot with Magisk v27
+2. Reinstall ksu_loader Magisk module
+3. Keep the same `kernelsu.ko` and KernelSU Next APK
 
 No need to rebuild the kernel module — the same `.ko` works as long as the kernel version hasn't changed.
 
@@ -166,10 +205,12 @@ realme-c53-unlock-root/
 ├── AGENTS.md                    ← AI agent instructions (10 workflows)
 ├── AI_PROMPT_TEMPLATE.md        ← Copy-paste prompts for any AI
 ├── pyproject.toml               ← Package metadata & tool config
-├── src/rmx_unlock/              ← Python package (13 modules)
+├── src/rmx_unlock/              ← Python package (all logic)
+├── docs/
+│   └── KSU_INIT_BUG.md          ← KSU init binary bug details
 ├── release/
-│   ├── build_release.py         ← Build patched boot image
-│   ├── runtime/                 ← Release artifacts (gitignored)
+│   ├── build_release.py         ← BUILD STAGE: patch stock→release
+│   ├── runtime/                 ← Build output (gitignored)
 │   │   ├── metadata.txt         ← SHA256 checksums
 │   │   └── kernelsu_patched_boot.img
 │   └── build/
@@ -180,13 +221,25 @@ realme-c53-unlock-root/
 │   ├── build_kernelsu_module.yml ← CI: build module + Release
 │   └── test_python.yml          ← CI: pytest on push/PR
 ├── tools/
-│   ├── unlock/                  ← CVE-2022-38694 exploit
-│   ├── driver/                  ← SPRD USB driver
-│   └── apk/                     ← KernelSU Next + Magisk APKs
+│   ├── unlock/
+│   │   ├── sprd/              ← SPRD/Unisoc tools (spd_dump.exe)
+│   │   ├── mtk/               ← MediaTek tools (user-provided)
+│   │   └── qcom/              ← Qualcomm tools (user-provided)
+│   ├── modules/
+│   │   └── ksu_loader/        ← Magisk module for auto-loading KSU
+│   │       └── ksu_loader_v2.zip
+│   ├── driver/                ← USB drivers per chipset
+│   └── apk/                   ← KernelSU Next + Magisk APKs
 ├── tests/                       ← Pytest unit tests
 ├── output/                      ← Backups & logs (gitignored)
 │   ├── backup/                  ← Stock boot images
 │   └── logs/                    ← Session logs
+├── devices/                      ← Device profiles (TOML)
+│   ├── RMX3760.toml             ← Realme C53 (SPRD)
+│   ├── RMX3750.toml             ← Realme C51 (SPRD)
+│   ├── example_mediatek.toml    ← MediaTek example
+│   ├── example_qualcomm.toml    ← Qualcomm example
+│   └── template.toml            ← Template for new devices
 ├── downloads/                   ← User-provided kernelsu.ko
 ├── files/                       ← Reference data (partition layout)
 ├── kernel_ack_5.15/             ← ACK kernel source (local build)
@@ -200,6 +253,7 @@ realme-c53-unlock-root/
 - **Test-boot safety** — KernelSU tested via `fastboot boot` before flashing
 - **Checksum verification** — SHA256 checked before every flash
 - **Your own Release** — each fork produces its own artifacts on its own GitHub
+- **Multiple root methods** — KernelSU LKM, Magisk, or hybrid (Magisk + KSU via Magisk module)
 - **Zero Python dependencies** — stdlib only
 
 ---

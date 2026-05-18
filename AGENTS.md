@@ -21,6 +21,9 @@ This file is the **constitution** for the AI agent. It defines:
 | | ❌ Samsung Knox | Cannot bypass Knox lock |
 | **Root method** | ✅ KernelSU LKM | Test-boot safety, requires matching vermagic |
 | | ✅ Magisk | Direct flash (no test-boot) |
+| | ✅ Hybrid (Magisk+KSU) | **Recommended for RMX3760** — Magisk v27 for root, KSU module loaded via Magisk module |
+| **Init_boot** | ✅ Has partition | Stock init_boot contains real init + ramdisk |
+| **KSU-only** | ❌ Bug ksud init | KSU init binary fails to load module on devices without stock ramdisk; use hybrid instead |
 | **Build kernel module** | ✅ Via GitHub Actions | CI builds kernelsu.ko |
 | | ✅ Local build | Via kernel_ack_5.15/ |
 | **Device support** | ✅ Any device with a TOML profile | See devices/ directory |
@@ -403,7 +406,17 @@ adb pull //data/local/tmp/boot.img output/backup/stock_boot_$(date +%Y%m%d_%H%M%
 
 Use when: user has stock boot image + kernelsu.ko, wants a flashable image.
 
-### KernelSU (recommended)
+### Magisk v27 (recommended for RMX3760)
+```bash
+# Built on-device via boot_patch.sh
+# Steps:
+# 1. Extract Magisk-v27.0.apk on device
+# 2. Run boot_patch.sh with KEEPVERITY=false
+# 3. Pull new-boot.img
+# See: docs/KSU_INIT_BUG.md for details
+```
+
+### KernelSU (experimental — KSU-only NOT working on RMX3760)
 ```bash
 python release/build_release.py \
   --kernelsu downloads/kernelsu.ko \
@@ -413,14 +426,12 @@ python release/build_release.py \
 python release/build/verify_release.py
 ```
 
-### Magisk (alternative)
+### Hybrid Magisk+KernelSU (stable for RMX3760)
 ```bash
-python release/build_release.py \
-  --magisk tools/apk/Magisk-v30.7.apk \
-  --stock output/backup/stock_boot_*.img
-
-# Verify
-python release/build/verify_release.py
+# 1. Flash Magisk v27 boot to both slots (fastboot or dd)
+# 2. Install Magisk module ksu_loader_v2.zip via Magisk app
+# 3. Module auto-loads kernelsu.ko via ksud late-load at boot
+# 4. Install KernelSU Next APK for app root management
 ```
 
 ## Workflow G: Flash KernelSU (with Test-Boot Safety)
@@ -515,6 +526,9 @@ Use when: user wants to trigger the automated release pipeline.
 | `fastboot flash boot` fails | Wrong slot | Always use `boot_a` and `boot_b` |
 | `vermagic mismatch` | Wrong kernel version | Build kernelsu.ko matching device kernel |
 | `insmod: failed` | Module incompatible | Use `insmod -f kernelsu.ko` to force load |
+| `ksud init no module` | Bug in ksud v3.2.0 | Use hybrid Magisk+KSU instead (see docs/KSU_INIT_BUG.md) |
+| `fastboot flash init_boot` fails | "Too many links" error | Use `adb shell dd` with root instead |
+| `Magisk v30.7 no su` | ADB shell not granted | Use Magisk v27 which exposes `su -c id` directly |
 | `su: inaccessible` | Root app not running | Open KernelSU Next / Magisk app |
 | Permission denied for shell | Root not granted | Grant in app → Superuser |
 | `python` not found | Python not installed | Install Python 3.10+ from python.org |
@@ -550,3 +564,9 @@ Use when: user wants to trigger the automated release pipeline.
 - **Checksums**: Release artifacts verified against `release/runtime/metadata.txt` before any flash
 - **Module location**: All logic lives in `src/rmx_unlock/`, root `cli.py` is thin entry point
 - `python release/build_release.py --all` to regenerate all patched images from stock boot
+- **Hybrid recommended**: RMX3760 has init_boot partition. Flash stock boot + patched init_boot for KSU-only,
+  but ksud v3.2.0 init binary FAILS to load module (see docs/KSU_INIT_BUG.md). Use hybrid Magisk+KSU instead.
+- **Magisk v27 stable, v30.7 NOT recommended**: Magisk v30.7 doesn't expose `su` to ADB shell reliably.
+  Magisk v27 provides `su -c id` directly. Download from GitHub releases.
+- **Device has init_boot**: `/dev/block/by-name/init_boot_a` (8MB). Stock contains real Android init.
+  KSU init_boot can be built with `ksud boot-patch --partition init_boot`.

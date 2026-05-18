@@ -2,7 +2,10 @@
 
 [English](README.md) | **Bahasa Indonesia**
 
-**Bangun kernel module sendiri via GitHub Actions, unlock bootloader, dan root Realme C53 atau tipe Realme lainnya.**
+**Unlock bootloader dan root Realme C53 (dan tipe Realme lainnya). Mendukung KernelSU, Magisk, atau hybrid keduanya.**
+
+> ⚠️ **Pengguna RMX3760 (Unisoc T612)**: KSU-only sedang rusak karena bug ksud init.
+> **Hybrid Magisk v27 + modul KernelSU via Magisk module** adalah solusi stabil. Lihat [docs/KSU_INIT_BUG.md](docs/KSU_INIT_BUG.md).
 
 Setiap GitHub Release yang Anda buat di fork sendiri adalah build PRIBADI Anda — simpan dan pakai lagi kapanpun perlu root ulang di device yang sama.
 
@@ -113,6 +116,27 @@ HP akan factory reset. Atur Android, aktifkan USB debugging.
 
 ### Langkah 4 — Build & Flash
 
+Pilih metode root Anda:
+
+**Opsi A — Hybrid Magisk + KernelSU (Direkomendasikan untuk RMX3760)**
+```bash
+# 1. Patch boot stock dengan Magisk v27 di HP via Magisk app
+# 2. Flash ke kedua slot:
+adb reboot bootloader
+fastboot flash boot_a magisk_patched_boot.img
+fastboot flash boot_b magisk_patched_boot.img
+fastboot reboot
+
+# 3. Install modul Magisk ksu_loader:
+#    Push tools/modules/ksu_loader/ksu_loader_v2.zip ke HP
+#    Buka Magisk app → Modules → Install from storage → pilih zip
+#    Reboot
+
+# 4. Install KernelSU Next APK
+adb install tools/apk/KernelSU_Next.apk
+```
+
+**Opsi B — KernelSU LKM (Test-boot safety)**
 ```bash
 # Backup stock boot dari HP
 python cli.py       # pilih menu 3
@@ -141,11 +165,17 @@ adb shell su -c id  # harus muncul uid=0(root)
 
 Release GitHub Anda terikat ke fork dan HP Anda. Jika perlu root ulang (setelah OTA, factory reset, dll):
 
+**Root KernelSU:**
 1. Buka halaman Releases fork Anda
 2. Download `kernelsu.ko` yang sama
 3. Backup stock boot baru: `python cli.py` → menu 3
 4. Build ulang: `python release/build_release.py --kernelsu kernelsu.ko --stock output/backup/stock_boot_*.img`
 5. Flash: `python cli.py` → menu 6
+
+**Hybrid Magisk+KSU:**
+1. Patch stock boot baru dengan Magisk v27
+2. Install ulang modul ksu_loader
+3. Pakai kernelsu.ko dan KernelSU Next APK yang sama
 
 Tidak perlu build kernel module lagi — `.ko` yang sama tetap work selama versi kernel tidak berubah.
 
@@ -156,18 +186,28 @@ Tidak perlu build kernel module lagi — `.ko` yang sama tetap work selama versi
 ```
 realme-c53-unlock-root/
 ├── cli.py                       ← Entry point utama (end-user)
-├── src/rmx_unlock/              ← Modul Python (12 file)
+├── AGENTS.md                    ← Instruksi AI agent
+├── AI_PROMPT_TEMPLATE.md        ← Template prompt AI siap pakai
+├── docs/                        ← Dokumentasi
+│   └── KSU_INIT_BUG.md          ← Detail bug ksud init
+├── src/rmx_unlock/              ← Python package (semua logic)
+├── devices/                     ← Profile device (TOML)
 ├── release/
-│   ├── build_release.py         ← Build boot image yang sudah di-patch
+│   ├── build_release.py         ← BUILD STAGE: patch stock→release
 │   └── build/
 │       ├── verify_release.py    ← Verifikasi SHA256
 │       └── host_patch.py        ← Patch boot tanpa HP
 ├── .github/workflows/
-│   └── build_kernelsu_module.yml ← CI: build kernel module + package Release
+│   └── build_kernelsu_module.yml ← CI: build kernel module + Release
 ├── tools/
-│   ├── unlock/                  ← Exploit CVE-2022-38694
-│   ├── driver/                  ← Driver USB SPRD
-│   └── apk/                     ← KernelSU Next APK
+│   ├── unlock/
+│   │   ├── sprd/              ← Tools SPRD/Unisoc
+│   │   ├── mtk/               ← Tools MediaTek
+│   │   └── qcom/              ← Tools Qualcomm
+│   ├── modules/
+│   │   └── ksu_loader/        ← Modul Magisk untuk auto-load KSU
+│   ├── driver/                ← Driver USB per chipset
+│   └── apk/                   ← KernelSU Next + Magisk APK
 └── tests/                       ← Pytest unit tests
 ```
 
@@ -177,6 +217,7 @@ realme-c53-unlock-root/
 - **Test-boot safety** — KernelSU di-test dulu via `fastboot boot` sebelum di-flash
 - **Checksum** — SHA256 diverifikasi sebelum flash
 - **Release Anda sendiri** — setiap fork produce artifact di GitHub masing-masing
+- **Multi-metode root** — KernelSU LKM, Magisk, atau hybrid (Magisk + KSU via Magisk module)
 - **Zero Python dependencies** — stdlib only
 
 ---
