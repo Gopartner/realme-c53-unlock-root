@@ -1,5 +1,8 @@
 # AGENTS.md — Realme C53 (RMX3760) Unlock & Root Guide for AI
 
+This file tells the AI agent how to help the user with unlocking, rooting,
+building kernel modules, and creating GitHub Releases for Realme C53 (RMX3760).
+
 ## Device Identity
 - **Model**: Realme C53 (RMX3760)
 - **SoC**: Unisoc T612 (ums9230)
@@ -114,117 +117,304 @@ export MSYS2_ARG_CONV_EXCL="*"
 # Then run adb commands normally
 ```
 
-## Release Build Pipeline (Developer)
+---
 
-Patching is done in BUILD stage — NOT on end-user devices:
+# AI Agent Workflows
+
+Below are complete step-by-step workflows the AI can follow autonomously.
+
+## Workflow A: Fork + Build Kernel Module (GitHub Actions)
+
+Use when: user wants to build their own kernelsu.ko via GitHub Actions.
+
+```
+1. Ask user: "Do you have a GitHub account?"
+   └─ If NO: Guide them to create one at github.com
+
+2. Ask user to fork the repo:
+   - Go to https://github.com/Gopartner/realme-c53-unlock-root
+   - Click "Fork" button
+
+3. Ask user to run GitHub Actions on their fork:
+   - Go to their fork's Actions tab
+   - Select "Build KernelSU LKM for Realme C53 (RMX3760)"
+   - Click "Run workflow"
+   - Optional: Enter vermagic suffix if needed
+   - Wait ~15 minutes
+
+4. After workflow completes:
+   - Go to Releases page on their fork
+   - Download the RMX3760_KernelSU_Release.zip
+   - Extract the zip
+
+5. The Release ZIP contains:
+   - kernelsu.ko             → kernel module
+   - kernelsu_patched_boot.img → ready to flash (if stock URL provided)
+   - unlock/                 → bootloader unlock tools
+   - apk/KernelSU_Next.apk   → root manager app
+   - flash.bat / flash.sh    → one-click flash scripts
+   - README.txt              → instructions
+
+6. Tell user: "Keep this Release ZIP safe. You can reuse it anytime
+   to root this device again without rebuilding."
+```
+
+## Workflow B: Use Existing Release (No Build Needed)
+
+Use when: user doesn't want to build, just wants to root using someone else's Release.
+
+```
+1. Check if an existing Release is available:
+   - Go to https://github.com/Gopartner/realme-c53-unlock-root/releases
+   - OR the user's fork Releases page
+   - Look for RMX3760_KernelSU_Release.zip
+
+2. If Release found:
+   - Download the ZIP
+   - Extract to a folder
+   - Continue with Workflow D (Bootloader Unlock)
+
+3. If no Release found:
+   - Tell user they need to either:
+     a. Fork and build their own (Workflow A)
+     b. Ask someone with same device to share their Release
+
+4. ⚠️ IMPORTANT: The kernelsu.ko must match the device kernel version.
+   Check vermagic: modinfo -F vermagic kernelsu.ko
+   Device kernel: 5.15.178-android13-8
+```
+
+## Workflow C: Install SPRD Driver
+
+Use when: user needs to install the USB driver for unlock.
 
 ```bash
-# Build all available release artifacts
-python release/build_release.py --all
+# Method 1: CLI
+python cli.py  # select menu 4
 
-# Or specify individual components
-python release/build_release.py --magisk tools/apk/Magisk-v30.7.apk --stock output/backup/stock_boot_20250101_120000.img
-python release/build_release.py --kernelsu kernelsu.ko --stock output/backup/stock_boot_20250101_120000.img
+# Method 2: Manual
+# Navigate to tools/driver/ folder
+# Run DPInst.exe or install.bat as Administrator
 
-# Verify release artifacts
+# Verify: Device Manager should show "SPRD U2S Diag (COM3)"
+# when phone is in download mode
+```
+
+## Workflow D: Unlock Bootloader (CVE-2022-38694)
+
+Use when: user wants to unlock the bootloader.
+
+### Prerequisites
+- SPRD driver installed (Workflow C)
+- Phone OFF, USB cable connected
+- Windows PC (spd_dump.exe is Windows-only)
+
+### Steps
+
+```bash
+# 0. Set path fix (Git Bash)
+export MSYS2_ARG_CONV_EXCL="*"
+
+# 1. Enter download mode
+# Power off phone → connect USB → hold both vol keys → tap power 1s → release power
+# Device should show as SPRD U2S Diag (COM3)
+
+# 2. Navigate to unlock tool
+cd tools/unlock
+
+# 3. Dump bootchain partitions
+spd_dump.exe dump 0x00000000 0x00002000 pgpt.bin
+spd_dump.exe dump 0x00002000 0x00006000 splloader.bin
+spd_dump.exe dump 0x0000c000 0x00004000 uboot_a.bin
+
+# 4. Generate patched SPL
+gen_spl-unlock.exe uboot_a.bin
+
+# 5. Erase SPL and write cboot
+spd_dump.exe erase 0x00002000 0x00006000
+spd_dump.exe write 0x00002000 rmx3762/fdl2-cboot.bin
+
+# 6. ⚠️ SCREWDRIVER TRICK
+# Tell user:
+#   "Hold BOTH volume keys, tap power button for 1 second, release power.
+#    Keep holding volume keys. Press Enter when ready."
+input "Press Enter after screwdriver trick..."
+
+# 7. Execute unlock payload
+spd_dump.exe write 0x00002000 spl-unlock.bin
+
+# 8. Restore bootchain
+spd_dump.exe write 0x00002000 u-boot-spl-16k-sign.bin
+spd_dump.exe write 0x0000c000 uboot_bak.bin
+spd_dump.exe erase 0x0000e000 0x00002000
+
+# 9. Verify
+spd_dump.exe dump 0x0000e000 0x00000001 miscdata.bin
+# Non-zero data = unlocked!
+
+# 10. Return to repo root
+cd ../..
+```
+
+### After Unlock
+- Phone will factory reset (this is normal)
+- Guide user to set up Android
+- Enable Developer Options → USB Debugging
+- Continue with Workflow E
+
+### Troubleshooting
+| Problem | Fix |
+|---------|-----|
+| "No device found" | Install/reinstall SPRD driver, check COM port |
+| "Connection failed" | Try different USB port, use USB 2.0 |
+| Phone not detected after screwdriver | Repeat step 1-6, hold vol keys tighter |
+| miscdata.bin is all zeros | Unlock failed, repeat from step 3 |
+
+## Workflow E: Backup Stock Boot Image
+
+Use after unlock, when phone is booted with USB debugging.
+
+```bash
+export MSYS2_ARG_CONV_EXCL="*"
+
+# Method 1: CLI
+python cli.py  # select menu 3
+
+# Method 2: Manual
+adb shell "dd if=/dev/block/by-name/boot_a of=/data/local/tmp/boot.img"
+adb pull //data/local/tmp/boot.img output/backup/stock_boot_$(date +%Y%m%d_%H%M%S).img
+```
+
+## Workflow F: Build Patched Boot Image
+
+Use when: user has stock boot image + kernelsu.ko, wants a flashable image.
+
+### KernelSU (recommended)
+```bash
+python release/build_release.py \
+  --kernelsu downloads/kernelsu.ko \
+  --stock output/backup/stock_boot_*.img
+
+# Verify
 python release/build/verify_release.py
 ```
 
-Output goes to `release/runtime/` with `metadata.txt` containing SHA256 checksums.
-
-## End-User Flow (CLI Tool)
-
+### Magisk (alternative)
 ```bash
-python cli.py
-# Menu options:
-#   1) Check environment (adb/fastboot)
-#   2) Validate device (RMX3760 check)
-#   3) Backup stock boot image
-#   4) Install SPD driver
-#   5) Flash KernelSU (with test-boot safety)
-#   6) Flash Magisk
-#   7) Verify root access
-#   8) Show release metadata
+python release/build_release.py \
+  --magisk tools/apk/Magisk-v30.7.apk \
+  --stock output/backup/stock_boot_*.img
+
+# Verify
+python release/build/verify_release.py
 ```
 
-## Step 1: Backup Data (Manual)
+## Workflow G: Flash KernelSU (with Test-Boot Safety)
+
 ```bash
 export MSYS2_ARG_CONV_EXCL="*"
-adb shell "mkdir -p /sdcard/backup_media && cp -r /sdcard/DCIM /sdcard/backup_media/ && cp -r /sdcard/Pictures /sdcard/backup_media/ && cp -r /sdcard/Download /sdcard/backup_media/"
-adb pull //sdcard/backup_media/ "D:/realme-c53-unlock-root/backup/"
+
+# Method 1: CLI (recommended)
+python cli.py  # select menu 6
+# Agent must tell user:
+#   "After fastboot boot, check if phone boots normally.
+#    If yes, press Enter to flash permanently.
+#    If no, press Ctrl+C — phone will reboot normally."
+
+# Method 2: Manual fastboot
+adb reboot bootloader
+fastboot boot kernelsu_patched_boot.img   # TEST FIRST
+# If booted successfully:
+fastboot flash boot_a kernelsu_patched_boot.img
+fastboot flash boot_b kernelsu_patched_boot.img
+fastboot reboot
+
+# After reboot, install APK:
+adb install tools/apk/KernelSU_Next.apk
 ```
 
-## Step 2: Unlock Bootloader (CVE-2022-38694)
-**Tool**: `https://github.com/TomKing062/CVE-2022-38694_unlock_bootloader` (release 1.72)
+## Workflow H: Flash Magisk (Direct)
 
-### Prerequisites
-- Install SPRD driver (CLI option 4 or manual `D:\realme-c53-unlock-root\tools\driver\`)
-- Device shows as **SPRD U2S Diag (COM3)** in Device Manager
-- `spd_dump.exe` needs `Channel9.dll` and `Channel.ini` in working dir
-
-### Sub-steps
-1. **Dump partitions**:
-   ```
-   cd tools\unlock
-   spd_dump.exe dump 0x00000000 0x00002000 pgpt.bin
-   spd_dump.exe dump 0x00002000 0x00006000 splloader.bin  
-   spd_dump.exe dump 0x0000c000 0x00004000 uboot_a.bin
-   ```
-2. **Generate patched SPL**: `gen_spl-unlock.exe uboot_a.bin`
-3. **Erase + write cboot**:
-   ```
-   spd_dump.exe erase 0x00002000 0x00006000
-   spd_dump.exe write 0x00002000 rmx3762/fdl2-cboot.bin
-   ```
-4. **Screwdriver+PowerOff**: Hold both vol keys, tap power 1s, release power
-5. **Run unlock payload**: `spd_dump.exe write 0x00002000 spl-unlock.bin`
-6. **Restore & wipe**:
-   ```
-   spd_dump.exe write 0x00002000 u-boot-spl-16k-sign.bin
-   spd_dump.exe write 0x0000c000 uboot_bak.bin
-   spd_dump.exe erase 0x0000e000 0x00002000
-   ```
-7. **Verify**: `spd_dump.exe dump 0x0000e000 0x00000001 miscdata.bin` → non-zero = unlocked
-
-## Step 3: Dump Stock Boot (CLI option 3)
 ```bash
 export MSYS2_ARG_CONV_EXCL="*"
-python cli.py  # then choose option 3
-# Or manually:
-adb shell "dd if=/dev/block/by-name/boot_a of=/data/local/tmp/boot.img"
-adb pull //data/local/tmp/boot.img "D:/realme-c53-unlock-root/output/backup/stock_boot_$(date +%Y%m%d_%H%M%S).img"
+
+# Method 1: CLI
+python cli.py  # select menu 7
+
+# Method 2: Manual
+adb reboot bootloader
+fastboot flash boot_a magisk_patched_boot.img
+fastboot flash boot_b magisk_patched_boot.img
+fastboot reboot
+
+# After reboot, install APK:
+adb install tools/apk/Magisk-v30.7.apk
 ```
 
-## Step 4: Root with Magisk (Build Stage)
+## Workflow I: Verify Root
+
 ```bash
-# BUILD: patch stock boot → release artifact
-python release/build_release.py --magisk tools/apk/Magisk-v30.7.apk --stock output/backup/stock_boot_*.img
+adb shell su -c id
+# Expected: uid=0(root)
 
-# FLASH on device:
-python cli.py  # option 6
+# If "Access denied" or "su: not found":
+#   1. Open KernelSU Next / Magisk app on phone
+#   2. Go to Superuser tab
+#   3. Grant root to Shell / ADB Shell
+#   4. Try again
+
+# Check KernelSU module loaded:
+adb shell lsmod | grep kernelsu
+
+# Check Magisk daemon:
+adb shell ps -A | grep magiskd
 ```
 
-## Step 5: Root with KernelSU (Build Stage)
-```bash
-# BUILD: patch stock boot with kernelsu.ko → release artifact
-python release/build_release.py --kernelsu kernelsu.ko --stock output/backup/stock_boot_*.img
+## Workflow J: Create GitHub Release (CI)
 
-# FLASH on device (with test-boot safety):
-python cli.py  # option 5
+Use when: user wants to trigger the automated release pipeline.
+
+```
+1. Go to GitHub Actions tab on their fork
+2. Select "Build KernelSU LKM for Realme C53 (RMX3760)"
+3. Click "Run workflow"
+4. Optional inputs:
+   - localversion: extra vermagic suffix (usually empty)
+   - stock_boot_url: URL to stock boot.img for full release
+5. Wait ~15 minutes
+6. GitHub automatically creates a Release with:
+   RMX3760_KernelSU_Release.zip
+   (contains kernelsu.ko + unlock tools + APK + flash scripts + README)
 ```
 
-## Grant Root Permission
-```bash
-adb shell su -c id  # Will show "Access denied" until granted
-```
-- Open **Magisk** (or KernelSU Next) on phone → **Superuser** tab → Grant **Shell
-## Kernel Source Notes
+---
+
+# Troubleshooting Guide
+
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| `adb: command not found` | ADB not installed | Install Android Platform Tools |
+| `fastboot: command not found` | Fastboot not installed | Install Android Platform Tools |
+| `device not detected` | USB debugging off | Enable Developer Options → USB Debugging |
+| `SPRD U2S Diag not showing` | Driver not installed | Run driver installer as Admin |
+| `flash boot failed` | Bootloader locked | Unlock first (Workflow D) |
+| `fastboot flash boot` fails | Wrong slot | Always use `boot_a` and `boot_b` |
+| `vermagic mismatch` | Wrong kernel version | Build kernelsu.ko matching device kernel |
+| `insmod: failed` | Module incompatible | Use `insmod -f kernelsu.ko` to force load |
+| `su: inaccessible` | Root app not running | Open KernelSU Next / Magisk app |
+| Permission denied for shell | Root not granted | Grant in app → Superuser |
+| `python` not found | Python not installed | Install Python 3.10+ from python.org |
+| `ModuleNotFoundError` | Wrong directory | Run commands from repo root |
+
+---
+
+# Kernel Source Notes
 - **`kernel_source/`** = Realme GPL source (Linux **5.4.254**) — WRONG version, device runs 5.15.178
 - **`kernel_ack_5.15/`** = ACK android14-5.15 (**5.15.178-android13-8**) — correct base for KernelSU LKM build
 - The `.config` in repo root was dumped from device (5.15.178) — useful as reference only
 - Realme GPL source is Linux 5.4-based and CANNOT build a 5.15 kernel
 
-## KernelSU LKM Build
+# KernelSU LKM Build
 - **Do NOT** use `kernel_source/` (it's 5.4, wrong architecture)
 - Build against `kernel_ack_5.15/` or fresh ACK android14-5.15 clone
 - GitHub Actions workflow: `.github/workflows/build_kernelsu_module.yml`
@@ -233,7 +423,7 @@ adb shell su -c id  # Will show "Access denied" until granted
 - Build with `CONFIG_LOCALVERSION_AUTO=n` for a clean `5.15.178-android13-8` vermagic
 - Fallback: `insmod -f kernelsu.ko` forces load despite vermagic mismatch
 
-## Notes for AI
+# Notes for AI
 - Use `export MSYS2_ARG_CONV_EXCL="*"` before ALL adb commands on Git Bash
 - `adb pull` from `/sdcard` needs `//sdcard/` prefix (double slash)
 - magiskd must be running after boot (check `ps -A | grep magiskd`)
