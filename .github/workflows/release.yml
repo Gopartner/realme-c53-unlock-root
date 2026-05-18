@@ -73,3 +73,44 @@ jobs:
           echo "vermagic=$(modinfo -F vermagic "$KSU_KO")" >> "$GITHUB_OUTPUT"
           mkdir -p staging/kernelsu
           cp "$KSU_KO" staging/kernelsu/
+      - name: Build patched boot image
+        if: inputs.stock_boot_url != ''
+        run: |
+          curl -L -o stock_boot.img "${{ inputs.stock_boot_url }}"
+          python repo/release/build_release.py \
+            --kernelsu staging/kernelsu/kernelsu.ko \
+            --stock stock_boot.img
+      - name: Package release
+        run: |
+          mkdir -p staging/complete
+          if [ -f "repo/release/runtime/kernelsu_patched_boot.img" ]; then
+            cp repo/release/runtime/kernelsu_patched_boot.img staging/complete/
+          fi
+          cp staging/kernelsu/kernelsu.ko staging/complete/
+          cp -r repo/tools/unlock staging/complete/unlock/
+          cp -r repo/tools/apk staging/complete/apk/
+          cp -r repo/tools/modules staging/complete/modules/
+          cp repo/release/build/flash.bat staging/complete/
+          cp repo/release/build/flash.sh staging/complete/
+          cat > staging/complete/README.txt << 'EOF'
+Realme C53 (RMX3760) Complete Root Toolkit
+EOF
+          cd staging/complete
+          zip -r "../../RMX3760_KernelSU_Release.zip" ./*
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RMX3760_KernelSU_Release
+          path: RMX3760_KernelSU_Release.zip
+      - name: Create GitHub Release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERMAGIC="${{ steps.extract.outputs.vermagic }}"
+          TAG_NAME="release-$(date +'%Y%m%d-%H%M%S')"
+          gh release create "$TAG_NAME" \
+            --repo "${{ github.repository }}" \
+            --title "RMX3760 Release $TAG_NAME" \
+            --notes "**Vermagic:** $VERMAGIC" \
+            RMX3760_KernelSU_Release.zip
