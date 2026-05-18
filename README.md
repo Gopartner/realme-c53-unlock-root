@@ -81,7 +81,7 @@ For other devices, fork the repo and update the kernel version in `.github/workf
 ### Step 1 — Fork & Build Kernel Module
 
 1. Fork this repo to your GitHub account
-2. Go to **Actions** tab → **Build KernelSU LKM** → **Run workflow**
+2. Go to **Actions** tab → **Build & Create Complete Release** → **Run workflow**
 3. Wait ~15 minutes
 4. GitHub creates a **Release** with `kernelsu.ko` inside
 
@@ -153,20 +153,36 @@ No need to rebuild the kernel module — the same `.ko` works as long as the ker
 
 ```
 realme-c53-unlock-root/
-├── cli.py                       ← Main entry point (end-user)
-├── src/rmx_unlock/              ← Python modules (12 files)
+├── cli.py                       ← Thin entry point (end-user)
+├── AGENTS.md                    ← AI agent instructions (10 workflows)
+├── AI_PROMPT_TEMPLATE.md        ← Copy-paste prompts for any AI
+├── pyproject.toml               ← Package metadata & tool config
+├── src/rmx_unlock/              ← Python package (13 modules)
 ├── release/
 │   ├── build_release.py         ← Build patched boot image
+│   ├── runtime/                 ← Release artifacts (gitignored)
+│   │   ├── metadata.txt         ← SHA256 checksums
+│   │   └── kernelsu_patched_boot.img
 │   └── build/
+│       ├── flash.bat            ← One-click flash script
 │       ├── verify_release.py    ← SHA256 verification
 │       └── host_patch.py        ← Patch boot without phone
 ├── .github/workflows/
-│   └── build_kernelsu_module.yml ← CI: build kernel module + package Release
+│   ├── build_kernelsu_module.yml ← CI: build module + Release
+│   └── test_python.yml          ← CI: pytest on push/PR
 ├── tools/
 │   ├── unlock/                  ← CVE-2022-38694 exploit
 │   ├── driver/                  ← SPRD USB driver
-│   └── apk/                     ← KernelSU Next APK
-└── tests/                       ← Pytest unit tests
+│   └── apk/                     ← KernelSU Next + Magisk APKs
+├── tests/                       ← Pytest unit tests
+├── output/                      ← Backups & logs (gitignored)
+│   ├── backup/                  ← Stock boot images
+│   └── logs/                    ← Session logs
+├── downloads/                   ← User-provided kernelsu.ko
+├── files/                       ← Reference data (partition layout)
+├── kernel_ack_5.15/             ← ACK kernel source (local build)
+├── kernel_source/               ← Realme GPL source (5.4, reference)
+└── toolchain/                   ← Build toolchain (optional)
 ```
 
 ### Key Design

@@ -37,7 +37,7 @@ python release/build/verify_release.py
 
 # 5. Jalankan CLI tool (end-user)
 python cli.py
-# Menu: 1) check env → 2) validate device → 3) backup → 4) driver → 5) unlock → 6) flash KernelSU → 7) verify
+# Menu: 1) check env → 2) validate device → 4) driver → 5) unlock → 3) backup → 6) flash KernelSU → 8) verify
 ```
 
 ### Alur kerja utama
@@ -64,33 +64,50 @@ D:\realme-c53-unlock-root\
 
 ### Structure
 ```
-D:\realme-c53-unlock-root\
-├── src/rmx_unlock/          # Modular Python package (all logic)
-│   ├── __init__.py          # Package metadata
-│   ├── __main__.py          # `python -m src.rmx_unlock`
-│   ├── config.py            # Paths, constants, device info
-│   ├── logger.py            # Structured logging (sessions)
-│   ├── adb.py               # ADB & Fastboot wrappers
-│   ├── validation.py        # Env/device checks, SHA256 verify
-│   ├── backup.py            # Stock boot image backup
-│   ├── flash.py             # Safer flashing with test-boot
-│   ├── metadata.py          # Release metadata parser
-│   ├── driver.py            # SPD driver installer
-│   ├── exceptions.py        # Custom exception hierarchy
-│   └── cli.py               # Thin orchestrator menu
+realme-c53-unlock-root/
+├── cli.py                       ← Thin entry point (end-user)
+├── AGENTS.md                    ← AI agent instructions (10 workflows)
+├── AI_PROMPT_TEMPLATE.md        ← Copy-paste prompts for any AI
+├── pyproject.toml               ← Package metadata & tool config
+├── src/rmx_unlock/              ← Python package (all logic)
+│   ├── __init__.py              ← Package init
+│   ├── __main__.py              ← `python -m src.rmx_unlock`
+│   ├── config.py                ← Paths, constants, device info
+│   ├── logger.py                ← Structured logging (sessions)
+│   ├── adb.py                   ← ADB & Fastboot wrappers
+│   ├── validation.py            ← Env/device checks, SHA256 verify
+│   ├── backup.py                 ← Stock boot image backup
+│   ├── flash.py                 ← Safer flashing with test-boot
+│   ├── unlock.py                ← Bootloader unlock logic
+│   ├── metadata.py              ← Release metadata parser
+│   ├── driver.py                ← SPD driver installer
+│   ├── cli.py                   ← Thin orchestrator menu
+│   └── exceptions.py            ← Custom exception hierarchy
 ├── release/
-│   ├── build_release.py     # BUILD STAGE: patch stock→release images
+│   ├── build_release.py         ← BUILD STAGE: patch stock→release
+│   ├── runtime/                 ← Build output (gitignored)
+│   │   ├── metadata.txt         ← SHA256 checksums
+│   │   └── kernelsu_patched_boot.img
 │   └── build/
-│       └── verify_release.py# Verify integrity of release artifacts
-├── cli.py                   # Thin entry point (calls src/rmx_unlock)
-├── pyproject.toml            # Package metadata
-├── output/
-│   ├── backup/              # Stock boot backups
-│   └── logs/                # Session logs
-└── tools/
-    ├── unlock/              # CVE-2022-38694 unlock tool
-    ├── apk/                 # Magisk APK, KernelSU APK
-    └── driver/              # SPRD driver
+│       ├── flash.bat            ← One-click flash script
+│       ├── verify_release.py    ← SHA256 verification
+│       └── host_patch.py        ← Patch boot without phone
+├── .github/workflows/
+│   ├── build_kernelsu_module.yml ← CI: build module + Release
+│   └── test_python.yml          ← CI: pytest on push/PR
+├── tools/
+│   ├── unlock/                  ← CVE-2022-38694 exploit
+│   ├── driver/                  ← SPRD USB driver
+│   └── apk/                     ← KernelSU Next + Magisk APKs
+├── tests/                       ← Pytest unit tests
+├── output/                      ← Backups & logs (gitignored)
+│   ├── backup/                  ← Stock boot images
+│   └── logs/                    ← Session logs
+├── downloads/                   ← User-provided kernelsu.ko
+├── files/                       ← Reference data (partition layout)
+├── kernel_ack_5.15/             ← ACK kernel source (local build)
+├── kernel_source/               ← Realme GPL source (5.4, reference)
+└── toolchain/                   ← Build toolchain (optional)
 ```
 
 ### Key Design Decisions
@@ -137,7 +154,7 @@ Use when: user wants to build their own kernelsu.ko via GitHub Actions.
 
 3. Ask user to run GitHub Actions on their fork:
    - Go to their fork's Actions tab
-   - Select "Build KernelSU LKM for Realme C53 (RMX3760)"
+   - Select "Build & Create Complete Release"
    - Click "Run workflow"
    - Optional: Enter vermagic suffix if needed
    - Wait ~15 minutes
@@ -376,7 +393,7 @@ Use when: user wants to trigger the automated release pipeline.
 
 ```
 1. Go to GitHub Actions tab on their fork
-2. Select "Build KernelSU LKM for Realme C53 (RMX3760)"
+2. Select "Build & Create Complete Release"
 3. Click "Run workflow"
 4. Optional inputs:
    - localversion: extra vermagic suffix (usually empty)
