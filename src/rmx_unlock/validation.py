@@ -2,7 +2,7 @@ import hashlib
 import os
 import shutil
 
-from .config import DEVICE_MODEL
+from .config import DEVICE
 from .adb import adb, device_model
 from .exceptions import BinaryMissing, UnsupportedDevice, DeviceNotDetected, ChecksumMismatch
 
@@ -36,7 +36,7 @@ def validate_device() -> bool:
         return False
     model = device_model()
     print(f"Detected: {model}")
-    if DEVICE_MODEL not in model:
+    if DEVICE.model not in model:
         print(f"[ERROR] Unsupported device: {model}")
         return False
     print("[OK] Supported device")

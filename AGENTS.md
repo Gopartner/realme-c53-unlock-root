@@ -103,6 +103,10 @@ realme-c53-unlock-root/
 ├── output/                      ← Backups & logs (gitignored)
 │   ├── backup/                  ← Stock boot images
 │   └── logs/                    ← Session logs
+├── devices/                      ← Device profiles (TOML)
+│   ├── RMX3760.toml             ← Realme C53
+│   ├── RMX3750.toml             ← Realme C51
+│   └── template.toml            ← Template for new devices
 ├── downloads/                   ← User-provided kernelsu.ko
 ├── files/                       ← Reference data (partition layout)
 ├── kernel_ack_5.15/             ← ACK kernel source (local build)
@@ -112,6 +116,7 @@ realme-c53-unlock-root/
 
 ### Key Design Decisions
 - **No live patching**: All boot image patching happens in BUILD stage (`release/build_release.py`), not on end-user devices
+- **Multi-device**: Device profiles in `devices/` (TOML). Add any Unisoc SPRD device by creating a new profile.
 - **CLI is orchestrator only**: `cli.py` just imports modules — no inline patching logic
 - **Safer flashing**: `flash_kernelsu()` does `fastboot boot` (test) before `fastboot flash` (commit)
 - **Checksum verification**: Release artifacts include SHA256 in `metadata.txt`, verified before flash

@@ -72,9 +72,12 @@ Fork this repo → Run GitHub Actions → Get YOUR Release
 | Model | SoC | Kernel | Status |
 |-------|-----|--------|--------|
 | Realme C53 (RMX3760) | Unisoc T612 | 5.15.178-android13-8 | ✅ Tested |
-| Other Unisoc T612 devices | Unisoc T612 | 5.15.x | ⚠️ May work (adjust kernel version) |
+| Realme C51 (RMX3750) | Unisoc T612 | 5.15.x | ✅ Profile included |
+| Other Unisoc T6xx devices | Unisoc T606/T610/T612/T618 | 5.15.x | ⚠️ Add your profile |
 
-For other devices, fork the repo and update the kernel version in `.github/workflows/build_kernelsu_module.yml`.
+**Multi-device support**: Each device gets its own TOML profile in `devices/`.
+Switch with menu `d)` or env var `RMX_DEVICE=RMX3750 python cli.py`.
+See `devices/template.toml` to add a new device.
 
 ---
 

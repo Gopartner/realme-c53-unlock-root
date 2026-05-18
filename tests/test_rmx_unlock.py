@@ -16,7 +16,7 @@ def test_config_paths():
     assert config.TOOLS.exists()
     assert config.UNLOCK_DIR.exists()
     assert config.DRIVER_DIR.exists()
-    assert "RMX3760" in config.DEVICE_MODEL
+    assert "RMX3760" in config.DEVICE.model
 
 
 def test_config_apk_paths():
@@ -27,8 +27,29 @@ def test_config_apk_paths():
 
 
 def test_config_slots():
-    assert "boot_a" in config.DEVICE_SLOTS
-    assert "boot_b" in config.DEVICE_SLOTS
+    assert "boot_a" in config.DEVICE.boot_slots
+    assert "boot_b" in config.DEVICE.boot_slots
+
+
+def test_config_profile_loaded():
+    assert config.DEVICE.name == "Realme C53"
+    assert config.DEVICE.soc == "Unisoc T612"
+    assert "5.15" in config.DEVICE.kernel
+
+
+def test_config_set_device():
+    config.set_device("RMX3750")
+    assert config.DEVICE.model == "RMX3750"
+    assert config.DEVICE.name == "Realme C51"
+    # Restore default
+    config.set_device("RMX3760")
+
+
+def test_list_profiles():
+    profiles = config.list_profiles()
+    assert "RMX3760" in profiles
+    assert "RMX3750" in profiles
+    assert "template" not in profiles
 
 
 def test_exception_hierarchy():

@@ -1,3 +1,4 @@
+from .config import DEVICE, DEVICES_DIR, set_device, list_profiles
 from .validation import check_environment, validate_device
 from .backup import backup_boot
 from .driver import install_driver
@@ -5,16 +6,21 @@ from .flash import flash_kernelsu, flash_magisk, verify_root
 from .unlock import unlock_bootloader
 from .metadata import display_metadata, parse_metadata
 from .logger import get_logger
+import os
 
 log = get_logger()
 
 
 def menu() -> str:
-    print("""
+    title = f"{DEVICE.name} Unlock & Root Toolkit v2.0.0"
+    subtitle = f"{DEVICE.model} | {DEVICE.soc}"
+    padding = max(0, 46 - len(title))
+    padding2 = max(0, 46 - len(subtitle))
+    print(f"""
 +------------------------------------------------+
-| Realme C53 Unlock & Root Toolkit  v2.0.0       |
+| {title}{' ' * padding} |
 +------------------------------------------------+
-| RMX3760 | Unisoc T612                          |
+| {subtitle}{' ' * padding2} |
 +------------------------------------------------+
 
   1) Check environment
@@ -26,6 +32,7 @@ def menu() -> str:
   7) Flash Magisk
   8) Verify root access
   9) Show release metadata
+  d) Switch device profile
 
    q) Quit
 
@@ -34,8 +41,37 @@ def menu() -> str:
     return input("Select: ").strip()
 
 
+def select_device():
+    profiles = list_profiles()
+    if not profiles:
+        print("[ERROR] No device profiles found in devices/")
+        return
+    print(f"\nCurrent device: {DEVICE.name} ({DEVICE.model})")
+    print("\nAvailable profiles:")
+    for i, p in enumerate(profiles, 1):
+        print(f"  {i}) {p}")
+    print(f"  q) Cancel")
+    choice = input("\nSelect profile: ").strip()
+    if choice.lower() == "q":
+        return
+    try:
+        idx = int(choice) - 1
+        if 0 <= idx < len(profiles):
+            set_device(profiles[idx])
+            print(f"[OK] Switched to {DEVICE.name} ({DEVICE.model})")
+        else:
+            print("[ERROR] Invalid selection")
+    except ValueError:
+        print("[ERROR] Invalid input")
+
+
 def main():
     log.info("=== RMX Unlock Tool started ===")
+    # Check RMX_DEVICE env var for profile override
+    env_dev = os.environ.get("RMX_DEVICE")
+    if env_dev and env_dev != DEVICE.model:
+        set_device(env_dev)
+        log.info(f"Device set from env: {DEVICE.model}")
     while True:
         try:
             choice = menu()
@@ -60,6 +96,8 @@ def main():
                     display_metadata(parse_metadata())
                 except Exception as e:
                     print(f"[ERROR] {e}")
+            elif choice.lower() == "d":
+                select_device()
             elif choice.lower() == "q":
                 break
             else:

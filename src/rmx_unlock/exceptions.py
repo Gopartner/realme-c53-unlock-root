@@ -7,7 +7,7 @@ class DeviceNotDetected(RmxError):
 
 
 class UnsupportedDevice(RmxError):
-    """Detected device does not match RMX3760."""
+    """Detected device does not match the configured device profile."""
 
 
 class BinaryMissing(RmxError):

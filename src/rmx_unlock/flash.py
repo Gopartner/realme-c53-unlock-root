@@ -1,6 +1,6 @@
 import os
 
-from .config import RUNTIME_IMAGES, METADATA_FILE
+from .config import RUNTIME_IMAGES, METADATA_FILE, DEVICE
 from .adb import adb, fastboot, reboot_bootloader, wait_for_fastboot
 from .validation import verify_release_file, verify_checksum
 from .metadata import get_checksum, parse_metadata, display_metadata
@@ -23,7 +23,7 @@ def _verify_image(image_path: str):
 
 
 def _flash_both_slots(image_path: str):
-    for slot in ["boot_a", "boot_b"]:
+    for slot in DEVICE.boot_slots:
         print(f"\nFlashing {slot}...")
         output = fastboot(f'flash {slot} "{image_path}"')
         print(output)

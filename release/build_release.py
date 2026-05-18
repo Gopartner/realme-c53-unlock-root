@@ -25,6 +25,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+# Add repo root to path so we can import config
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from src.rmx_unlock.config import set_device, DEVICE, DEVICES_DIR, list_profiles
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_DIR = REPO_ROOT / "release" / "runtime"
 BACKUP_DIR = REPO_ROOT / "output" / "backup"
@@ -158,13 +162,14 @@ def build_kernelsu(stock_path: str, kernelsu_ko_path: str):
 def write_metadata(artifacts: dict):
     meta_path = RUNTIME_DIR / "metadata.txt"
     lines = [
-        "# Realme C53 (RMX3760) Release Metadata",
+        f"# {DEVICE.name} ({DEVICE.model}) Release Metadata",
         f"# Generated: {datetime.now().isoformat()}",
         f"# Tool Version: 2.0.0",
-        f"DEVICE=RMX3760",
-        f"SOC=Unisoc T612 (ums9230)",
-        f"KERNEL=5.15.178-android13-8",
-        f"ANDROID=15 (AP3A.240905.015.A2)",
+        f"DEVICE={DEVICE.model}",
+        f"NAME={DEVICE.name}",
+        f"SOC={DEVICE.soc} ({DEVICE.chipset})",
+        f"KERNEL={DEVICE.kernel}",
+        f"ANDROID={DEVICE.android}",
         "",
     ]
     for name, path in artifacts.items():
@@ -179,12 +184,18 @@ def write_metadata(artifacts: dict):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Build release artifacts for RMX3760")
+    parser = argparse.ArgumentParser(description=f"Build release artifacts for {DEVICE.model}")
     parser.add_argument("--magisk", help="Path to Magisk APK")
     parser.add_argument("--kernelsu", help="Path to kernelsu.ko")
     parser.add_argument("--stock", help="Path to stock boot image")
     parser.add_argument("--all", action="store_true", help="Build everything available")
+    parser.add_argument("--device", help=f"Device profile (default: {DEVICE.model})")
     args = parser.parse_args()
+
+    if args.device:
+        set_device(args.device)
+
+    log(f"Device: {DEVICE.name} ({DEVICE.model}) — {DEVICE.kernel}")
 
     if args.all:
         stock = args.stock or find_stock_boot()

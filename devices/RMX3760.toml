@@ -1,0 +1,29 @@
+[device]
+name = "Realme C53"
+model = "RMX3760"
+soc = "Unisoc T612"
+chipset = "ums9230"
+kernel = "5.15.178-android13-8"
+android = "15 (AP3A.240905.015.A2)"
+build_fingerprint = "realme/RMX3760/RE58C2:15/AP3A.240905.015.A2/T.R4T2.1773288057:user/release-keys"
+
+[slots]
+boot = ["boot_a", "boot_b"]
+init_boot = []
+super = true
+
+[unlock]
+method = "cve-2022-38694"
+diag_mode = "SPRD U2S Diag"
+requires_windows = true
+requires_driver = "SPRD"
+
+[build]
+kernel_source = "https://android.googlesource.com/kernel/common"
+kernel_branch = "android14-5.15"
+defconfig = "gki_defconfig"
+sublevel = 178
+localversion = "-android13-8"
+extraversion = ""
+is_gki = true
+arch = "arm64"
