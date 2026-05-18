@@ -8,7 +8,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOLS = REPO_ROOT / "tools"
 APK_DIR = TOOLS / "apk"
-UNLOCK_DIR = TOOLS / "unlock"
+# UNLOCK_DIR points to the root tools/unlock/ directory.
+# Per-chipset tools are in subdirectories (sprd/, mtk/, qcom/).
+UNLOCK_BASE = TOOLS / "unlock"
 DRIVER_DIR = TOOLS / "driver"
 RELEASE_DIR = REPO_ROOT / "release"
 RUNTIME_DIR = RELEASE_DIR / "runtime"
@@ -37,6 +39,7 @@ VERSION = "2.0.0"
 class DeviceProfile:
     name: str = "Unknown"
     model: str = "UNKNOWN"
+    chipset_family: str = "sprd"
     soc: str = "Unknown"
     chipset: str = ""
     kernel: str = "Unknown"
@@ -47,8 +50,10 @@ class DeviceProfile:
     has_super: bool = True
     unlock_method: str = "cve-2022-38694"
     diag_mode: str = "SPRD U2S Diag"
+    download_mode_instructions: str = ""
     requires_windows: bool = True
     requires_driver: str = "SPRD"
+    build_method: str = "kernelsu"
     kernel_source: str = "https://android.googlesource.com/kernel/common"
     kernel_branch: str = "android14-5.15"
     defconfig: str = "gki_defconfig"
@@ -57,6 +62,7 @@ class DeviceProfile:
     extraversion: str = ""
     is_gki: bool = True
     arch: str = "arm64"
+    cc_prefix: str = "aarch64-linux-gnu-"
 
 
 # Current active device profile — updated by set_device()
@@ -109,6 +115,7 @@ def load_profile(model: str) -> DeviceProfile:
     return DeviceProfile(
         name=get("device", "name", "Unknown"),
         model=get("device", "model", "UNKNOWN"),
+        chipset_family=get("device", "chipset_family", "sprd"),
         soc=get("device", "soc", "Unknown"),
         chipset=get("device", "chipset", ""),
         kernel=get("device", "kernel", "Unknown"),
@@ -119,8 +126,10 @@ def load_profile(model: str) -> DeviceProfile:
         has_super=getbool("slots", "super", True),
         unlock_method=get("unlock", "method", "cve-2022-38694"),
         diag_mode=get("unlock", "diag_mode", "SPRD U2S Diag"),
+        download_mode_instructions=get("unlock", "download_mode_instructions", ""),
         requires_windows=getbool("unlock", "requires_windows", True),
         requires_driver=get("unlock", "requires_driver", "SPRD"),
+        build_method=get("build", "method", "kernelsu"),
         kernel_source=get("build", "kernel_source", "https://android.googlesource.com/kernel/common"),
         kernel_branch=get("build", "kernel_branch", "android14-5.15"),
         defconfig=get("build", "defconfig", "gki_defconfig"),
@@ -129,6 +138,7 @@ def load_profile(model: str) -> DeviceProfile:
         extraversion=get("build", "extraversion", ""),
         is_gki=getbool("build", "is_gki", True),
         arch=get("build", "arch", "arm64"),
+        cc_prefix=get("build", "cc_prefix", "aarch64-linux-gnu-"),
     )
 
 

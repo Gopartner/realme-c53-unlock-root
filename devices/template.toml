@@ -1,27 +1,38 @@
 # Device Profile Template
 # Copy this file, rename to YOUR_MODEL.toml, and fill in the values.
+# Supported chipset families: sprd, mediatek, qualcomm
 
 [device]
 name = "Realme C53"                       # Device marketing name
 model = "RMX3760"                          # Build.prop ro.product.model
+chipset_family = "sprd"                    # sprd / mediatek / qualcomm
 soc = "Unisoc T612"                        # SoC name
-chipset = "ums9230"                        # Chipset codename
+chipset = "ums9230"                        # Chipset / platform codename
 kernel = "5.15.178-android13-8"            # `adb shell cat /proc/version`
 android = "15"                             # Android version
 build_fingerprint = "realme/RMX3760/..."   # ro.build.fingerprint
 
 [slots]
-boot = ["boot_a", "boot_b"]                # Slot naming
+boot = ["boot_a", "boot_b"]                # Slot naming (e.g. ["boot"], ["boot_a","boot_b"])
 init_boot = []                             # Leave empty if no init_boot partition
 super = true                               # Has super partition?
 
 [unlock]
-method = "cve-2022-38694"                  # Unlock method
+method = "cve-2022-38694"                  # Unlock method to use
+# Available methods and their required toolkits:
+#   sprd:     cve-2022-38694   → tools/unlock/sprd/ (spd_dump.exe)
+#   mediatek: mtk-brom         → tools/unlock/mtk/  (mtkclient / brom_mode)
+#   qualcomm: qcom-edl         → tools/unlock/qcom/ (QFIL / firehose)
+#   qualcomm: fastboot-oem     → needs only fastboot
+#   mediatek: fastboot-oem     → needs only fastboot
+
 diag_mode = "SPRD U2S Diag"               # Device manager name in download mode
-requires_windows = true                    # spd_dump.exe is Windows-only
+download_mode_instructions = ""            # How to enter download mode (e.g. "hold vol up + connect USB")
+requires_windows = true                    # Unlock tool is Windows-only
 requires_driver = "SPRD"                   # Driver name to install
 
 [build]
+method = "kernelsu"                        # kernelsu or magisk
 kernel_source = "https://android.googlesource.com/kernel/common"
 kernel_branch = "android14-5.15"
 defconfig = "gki_defconfig"
@@ -29,4 +40,5 @@ sublevel = 178
 localversion = "-android13-8"
 extraversion = ""                          # Extra vermagic suffix
 is_gki = true                              # Generic Kernel Image?
-arch = "arm64"
+arch = "arm64"                             # CPU architecture
+cc_prefix = "aarch64-linux-gnu-"           # Cross-compiler prefix

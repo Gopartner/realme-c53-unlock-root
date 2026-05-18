@@ -14,7 +14,7 @@ from rmx_unlock import metadata
 def test_config_paths():
     assert config.REPO_ROOT.exists()
     assert config.TOOLS.exists()
-    assert config.UNLOCK_DIR.exists()
+    assert config.UNLOCK_BASE.exists()
     assert config.DRIVER_DIR.exists()
     assert "RMX3760" in config.DEVICE.model
 

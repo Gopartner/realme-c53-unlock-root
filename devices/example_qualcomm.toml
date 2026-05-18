@@ -1,0 +1,37 @@
+# Example: Qualcomm Snapdragon 680 Device (e.g. Realme GT Master)
+# Copy and rename to YOUR_MODEL.toml, then fill in real values.
+# For EDL mode you need QFIL/firehose programmer in tools/unlock/qcom/
+
+[device]
+name = "Realme GT Master (Example)"
+model = "RMX3360"
+chipset_family = "qualcomm"
+soc = "Qualcomm Snapdragon 680"
+chipset = "sm6225"
+kernel = "4.19.xxx-perf+"
+android = "13"
+build_fingerprint = "realme/RMX3360/..."
+
+[slots]
+boot = ["boot_a", "boot_b"]
+init_boot = []
+super = true
+
+[unlock]
+method = "fastboot-oem"
+diag_mode = "Qualcomm HS-USB QDLoader (COM3)"
+download_mode_instructions = "Power off → hold vol up/down → connect USB → EDL mode"
+requires_windows = false
+requires_driver = "Qualcomm USB"
+
+[build]
+method = "magisk"
+kernel_source = ""
+kernel_branch = ""
+defconfig = ""
+sublevel = 0
+localversion = ""
+extraversion = ""
+is_gki = false
+arch = "arm64"
+cc_prefix = "aarch64-linux-gnu-"

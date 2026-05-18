@@ -2,7 +2,7 @@ import os
 import subprocess
 import sys
 
-from .config import UNLOCK_DIR
+from .config import DEVICE, UNLOCK_BASE
 from .logger import get_logger
 
 log = get_logger()
@@ -20,18 +20,27 @@ def _run(cmd: str, desc: str = ""):
     return result
 
 
-def unlock_bootloader():
-    print("\n=== Unlock Bootloader (CVE-2022-38694) ===")
-    print(" Prerequisites:")
-    print(" - SPRD driver installed (CLI option 4)")
-    print(" - Device shows as SPRD U2S Diag (COM3) in Device Manager")
-    print(" - Phone OFF, USB cable connected")
+def _chipset_dir() -> str:
+    family = DEVICE.chipset_family
+    d = UNLOCK_BASE / family
+    if not d.exists():
+        d.mkdir(parents=True, exist_ok=True)
+    return str(d)
+
+
+def _sprd_unlock():
+    print(f"\n=== SPRD Unlock (CVE-2022-38694) — {DEVICE.model} ===")
+    print(f" Device: {DEVICE.name}")
+    print(f" Diag mode: {DEVICE.diag_mode}")
+    if DEVICE.download_mode_instructions:
+        print(f" Enter download mode: {DEVICE.download_mode_instructions}")
     print("")
     input(" Press Enter when ready to start...")
 
     cwd = os.getcwd()
-    os.chdir(str(UNLOCK_DIR))
-    log.info(f"Changed to unlock dir: {UNLOCK_DIR}")
+    workdir = _chipset_dir()
+    os.chdir(workdir)
+    log.info(f"Changed to unlock dir: {workdir}")
 
     print("\n[1/5] Dumping bootchain partitions...")
     _run("spd_dump.exe dump 0x00000000 0x00002000 pgpt.bin", "Dump PGPT")
@@ -43,7 +52,7 @@ def unlock_bootloader():
 
     print("\n[3/5] Erasing SPL and writing cboot...")
     _run("spd_dump.exe erase 0x00002000 0x00006000", "Erase SPL")
-    _run("spd_dump.exe write 0x00002000 rmx3762/fdl2-cboot.bin", "Write cboot")
+    _run(f"spd_dump.exe write 0x00002000 {DEVICE.model.lower()}/fdl2-cboot.bin", "Write cboot")
 
     print("")
     print("=== SCREWDRIVER STEP ===")
@@ -66,6 +75,121 @@ def unlock_bootloader():
     print("""
  If miscdata.bin has non-zero data -> UNLOCKED!
  Reboot phone (hold power) -> factory reset -> enable USB debugging.
- Then run CLI option 3 to backup boot, option 5 to flash KernelSU.
+ Then run CLI option 3 to backup boot, option 6 to flash.
 """)
-    log.info("Unlock process completed")
+
+
+def _mtk_unlock():
+    print(f"\n=== MediaTek BROM Unlock — {DEVICE.model} ===")
+    print(f" Device: {DEVICE.name}")
+    print(f" Chipset: {DEVICE.chipset} ({DEVICE.chipset_family})")
+    if DEVICE.download_mode_instructions:
+        print(f" Enter BROM mode: {DEVICE.download_mode_instructions}")
+    print(f"")
+    print(f" Required tools in tools/unlock/mtk/:")
+    print(f"   - mtkclient (mtk, mtk_gui)")
+    print(f"   - OR brom_mode.exe + SP Flash Tool")
+    print(f"")
+    print(f" Install mtkclient: pip install mtkclient")
+    print(f" Or download from: https://github.com/bkerler/mtkclient")
+    print(f"")
+    input(" Press Enter when ready...")
+
+    workdir = _chipset_dir()
+    mtk_bin = os.path.join(workdir, "mtk")
+    if os.path.exists(mtk_bin) or subprocess.run("where mtk", shell=True, capture_output=True).returncode == 0:
+        print("\n Using mtkclient...")
+        _run(f"mtk da seccfg unlock", "BROM unlock via mtkclient")
+    else:
+        print("\n[!] mtkclient not found.")
+        print(" Place mtkclient.exe or brom_mode.exe in tools/unlock/mtk/")
+        print(" Or install: pip install mtkclient")
+        print("")
+        print(" Alternative manual steps:")
+        print(" 1. Connect device in BROM mode")
+        print(" 2. Use SP Flash Tool to dump preloader + boot")
+        print(" 3. Patch with appropriate unlock tool")
+        print(" 4. Flash back")
+        if input(" Open browser to mtkclient GitHub? (y/N): ").lower() == "y":
+            import webbrowser
+            webbrowser.open("https://github.com/bkerler/mtkclient")
+
+
+def _qcom_unlock():
+    print(f"\n=== Qualcomm Unlock — {DEVICE.model} ===")
+    print(f" Device: {DEVICE.name}")
+    print(f" Chipset: {DEVICE.chipset}")
+    print(f" Method: {DEVICE.unlock_method}")
+    print(f"")
+
+    if DEVICE.unlock_method == "fastboot-oem":
+        print(" Using fastboot OEM unlock...")
+        print(" Bootloader must already allow: fastboot flashing unlock")
+        print("")
+        input(" Press Enter to attempt unlock...")
+        _run("fastboot flashing unlock", "fastboot flashing unlock")
+        _run("fastboot flashing get_unlock_ability", "Check unlock ability")
+        print("""
+ If the device shows a confirmation prompt on screen:
+   Use volume keys to select UNLOCK, press power.
+ Then reboot: fastboot reboot
+""")
+    else:
+        print(f"\n EDL mode unlock for {DEVICE.chipset}")
+        print(" Required tools in tools/unlock/qcom/:")
+        print("   - QFIL / QPST (Windows)")
+        print("   - edl (Python): pip install edl")
+        print("   - Firehose programmer file (device-specific)")
+        print("")
+        print(" Manual steps:")
+        print(" 1. Enter EDL mode (test point or vol keys)")
+        print(" 2. Use QFIL to flash patched boot image")
+        print(" 3. Or use: edl --loader=prog_ufs_firehose_*.elf unlock")
+        print("")
+        if input(" Open browser to edl tool? (y/N): ").lower() == "y":
+            import webbrowser
+            webbrowser.open("https://github.com/bkerler/edl")
+
+
+def _unlock_not_supported():
+    print(f"\n=== Unlock — {DEVICE.model} ===")
+    print(f" Method '{DEVICE.unlock_method}' for {DEVICE.chipset_family} is not yet implemented.")
+    print(f" Device: {DEVICE.name} ({DEVICE.model})")
+    print(f" Chipset: {DEVICE.soc} ({DEVICE.chipset})")
+    print(f"")
+    print(f" You can contribute by adding the unlock flow for this chipset.")
+    print(f" Edit: src/rmx_unlock/unlock.py")
+    print(f" Reference: https://github.com/bkerler/mtkclient (MTK)")
+    print(f" Reference: https://github.com/bkerler/edl (Qualcomm)")
+    print(f"")
+    print(f" Meanwhile, you can still use menu options:")
+    print(f"   1) Check environment")
+    print(f"   2) Validate device")
+    print(f"   3) Backup stock boot image")
+    print(f"   8) Verify root")
+
+
+def unlock_bootloader():
+    print(f"\n=== Bootloader Unlock — {DEVICE.name} ({DEVICE.model}) ===")
+    print(f" Chipset: {DEVICE.chipset_family} | Method: {DEVICE.unlock_method}")
+    print(f"")
+
+    method_map = {
+        "sprd": _sprd_unlock,
+        ("sprd", "cve-2022-38694"): _sprd_unlock,
+        "mediatek": _mtk_unlock,
+        ("mediatek", "mtk-brom"): _mtk_unlock,
+        "qualcomm": _qcom_unlock,
+        ("qualcomm", "fastboot-oem"): _qcom_unlock,
+        ("qualcomm", "qcom-edl"): _qcom_unlock,
+    }
+
+    key = (DEVICE.chipset_family, DEVICE.unlock_method)
+    handler = method_map.get(key) or method_map.get(DEVICE.chipset_family)
+
+    if handler:
+        handler()
+    else:
+        _unlock_not_supported()
+
+    log.info(f"Unlock process completed for {DEVICE.model}")

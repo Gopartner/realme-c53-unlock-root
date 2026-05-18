@@ -69,15 +69,19 @@ Fork this repo → Run GitHub Actions → Get YOUR Release
 
 ## 📋 Device Compatibility
 
-| Model | SoC | Kernel | Status |
-|-------|-----|--------|--------|
-| Realme C53 (RMX3760) | Unisoc T612 | 5.15.178-android13-8 | ✅ Tested |
-| Realme C51 (RMX3750) | Unisoc T612 | 5.15.x | ✅ Profile included |
-| Other Unisoc T6xx devices | Unisoc T606/T610/T612/T618 | 5.15.x | ⚠️ Add your profile |
+| Chipset Family | SoC/Platform | Unlock Method | Status |
+|----------------|-------------|---------------|--------|
+| **SPRD** (Unisoc) | T606, T610, **T612**, T618 | CVE-2022-38694 | ✅ Tested (C53) |
+| **MediaTek** | Helio Gxx, Dimensity | BROM mode (mtkclient) | ⚠️ Profile example |
+| **Qualcomm** | Snapdragon 6xx/7xx | EDL / fastboot oem | ⚠️ Profile example |
 
-**Multi-device support**: Each device gets its own TOML profile in `devices/`.
-Switch with menu `d)` or env var `RMX_DEVICE=RMX3750 python cli.py`.
-See `devices/template.toml` to add a new device.
+**Multi-device + multi-chipset**: Setiap device punya profile TOML di `devices/`.
+Ganti dengan menu `d)` atau env var `RMX_DEVICE=example_mediatek python cli.py`.
+
+Bikin profile sendiri: copy `devices/template.toml` → `devices/MODEL_ANDA.toml`, isi nilai device-nya.
+
+> Untuk chipset non-SPRD, unlock tools tidak termasuk dalam repo.
+> Lihat petunjuk unlock di CLI menu 5 untuk link download tools yang diperlukan.
 
 ---
 

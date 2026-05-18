@@ -1,0 +1,37 @@
+# Example: MediaTek Helio G88 Device (e.g. Realme C65)
+# Copy and rename to YOUR_MODEL.toml, then fill in real values.
+# You need mtkclient or SP Flash Tool in tools/unlock/mtk/
+
+[device]
+name = "Realme C65 (Example)"
+model = "RMX3921"
+chipset_family = "mediatek"
+soc = "MediaTek Helio G88"
+chipset = "mt6768"
+kernel = "5.15.xxx-android13-xx"
+android = "14"
+build_fingerprint = "realme/RMX3921/..."
+
+[slots]
+boot = ["boot", "boot_a", "boot_b"]
+init_boot = []
+super = true
+
+[unlock]
+method = "mtk-brom"
+diag_mode = "MediaTek USB Port (COM3)"
+download_mode_instructions = "Power off → hold vol up/down → connect USB"
+requires_windows = true
+requires_driver = "MediaTek DA"
+
+[build]
+method = "kernelsu"
+kernel_source = "https://github.com/realme-kernel-opensource/..."
+kernel_branch = "master"
+defconfig = "vendor/k69v1_64_k419_defconfig"
+sublevel = 0
+localversion = "-android13-8"
+extraversion = ""
+is_gki = false
+arch = "arm64"
+cc_prefix = "aarch64-linux-gnu-"

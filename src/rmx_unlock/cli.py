@@ -13,9 +13,15 @@ log = get_logger()
 
 def menu() -> str:
     title = f"{DEVICE.name} Unlock & Root Toolkit v2.0.0"
-    subtitle = f"{DEVICE.model} | {DEVICE.soc}"
+    subtitle = f"{DEVICE.model} | {DEVICE.soc} | {DEVICE.chipset_family}"
     padding = max(0, 46 - len(title))
     padding2 = max(0, 46 - len(subtitle))
+    method_label = {
+        "cve-2022-38694": " (CVE-2022-38694)",
+        "mtk-brom": " (BROM mode)",
+        "qcom-edl": " (EDL mode)",
+        "fastboot-oem": " (fastboot oem)",
+    }.get(DEVICE.unlock_method, "")
     print(f"""
 +------------------------------------------------+
 | {title}{' ' * padding} |
@@ -26,8 +32,8 @@ def menu() -> str:
   1) Check environment
   2) Validate device
   3) Backup stock boot image
-  4) Install SPD driver
-  5) Unlock bootloader (CVE-2022-38694)
+  4) Install {DEVICE.requires_driver} driver
+  5) Unlock bootloader{method_label}
   6) Flash KernelSU (with test-boot)
   7) Flash Magisk
   8) Verify root access

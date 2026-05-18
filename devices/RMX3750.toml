@@ -1,6 +1,7 @@
 [device]
 name = "Realme C51"
 model = "RMX3750"
+chipset_family = "sprd"
 soc = "Unisoc T612"
 chipset = "ums9230"
 kernel = "5.15.178-android13-8"
@@ -15,10 +16,12 @@ super = true
 [unlock]
 method = "cve-2022-38694"
 diag_mode = "SPRD U2S Diag"
+download_mode_instructions = "Power off → connect USB → hold both vol keys → tap power 1s → release power"
 requires_windows = true
 requires_driver = "SPRD"
 
 [build]
+method = "kernelsu"
 kernel_source = "https://android.googlesource.com/kernel/common"
 kernel_branch = "android14-5.15"
 defconfig = "gki_defconfig"
@@ -27,3 +30,4 @@ localversion = "-android13-8"
 extraversion = ""
 is_gki = true
 arch = "arm64"
+cc_prefix = "aarch64-linux-gnu-"

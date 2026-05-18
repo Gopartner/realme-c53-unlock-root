@@ -5,8 +5,9 @@ Bingung mau nulis apa ke AI agent? Copy-paste aja template di bawah.
 > **Prasyarat**: kamu sudah clone repo ini dan buka AI agent (opencode, Cline, Claude, dll)
 > dari **dalam folder repo**. Biar AI bisa baca file-file nya.
 >
-> **Multi-device**: Ganti `RMX3760` dengan model HP kamu kalau beda.
-> Device profile tersedia di `devices/` — kalau belum ada, bilang ke AI "bikin profile baru".
+> **Multi-device + Multi-chipset**: Ganti `RMX3760` sesuai device kamu (atau ganti
+> `Realme C53`). Profile tersedia di `devices/` — SPRD (C53/C51), MediaTek, Qualcomm.
+> Kalau device kamu belum ada, bilang ke AI "bikin profile baru".
 
 ---
 

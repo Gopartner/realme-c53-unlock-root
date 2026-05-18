@@ -50,7 +50,7 @@ python cli.py
 | **Developer** | `python release/build/host_patch.py --kernelsu ksu.ko --stock boot.img` | Patch boot tanpa ADB/device (host-side, Linux x86_64) |
 | **Developer** | `python -m pytest tests/ -v` | Jalankan unit tests |
 | **Developer** | `pre-commit run --all-files` | Lint & format check |
-| **End-user** | `python cli.py` → pilih 5 | Unlock bootloader via CVE-2022-38694 (SPRD diag mode) |
+| **End-user** | `python cli.py` → pilih 5 | Unlock bootloader (otomatis pilih metode sesuai device profile) |
 | **End-user** | `python cli.py` → pilih 6 | Flash KernelSU image (test-boot dulu, baru commit) |
 | **End-user** | `python cli.py` → pilih 7 | Flash Magisk image (langsung flash kedua slot) |
 | **Pertama kali buka repo** | `python cli.py` | Python stdlib only, no dependencies |
@@ -96,16 +96,21 @@ realme-c53-unlock-root/
 │   ├── build_kernelsu_module.yml ← CI: build module + Release
 │   └── test_python.yml          ← CI: pytest on push/PR
 ├── tools/
-│   ├── unlock/                  ← CVE-2022-38694 exploit
-│   ├── driver/                  ← SPRD USB driver
-│   └── apk/                     ← KernelSU Next + Magisk APKs
+│   ├── unlock/
+│   │   ├── sprd/              ← SPRD/Unisoc tools (spd_dump.exe)
+│   │   ├── mtk/               ← MediaTek tools (user-provided: mtkclient)
+│   │   └── qcom/              ← Qualcomm tools (user-provided: edl)
+│   ├── driver/                ← USB drivers per chipset
+│   └── apk/                   ← KernelSU Next + Magisk APKs
 ├── tests/                       ← Pytest unit tests
 ├── output/                      ← Backups & logs (gitignored)
 │   ├── backup/                  ← Stock boot images
 │   └── logs/                    ← Session logs
 ├── devices/                      ← Device profiles (TOML)
-│   ├── RMX3760.toml             ← Realme C53
-│   ├── RMX3750.toml             ← Realme C51
+│   ├── RMX3760.toml             ← Realme C53 (SPRD)
+│   ├── RMX3750.toml             ← Realme C51 (SPRD)
+│   ├── example_mediatek.toml    ← MediaTek Helio example
+│   ├── example_qualcomm.toml    ← Qualcomm Snapdragon example
 │   └── template.toml            ← Template for new devices
 ├── downloads/                   ← User-provided kernelsu.ko
 ├── files/                       ← Reference data (partition layout)
@@ -116,7 +121,7 @@ realme-c53-unlock-root/
 
 ### Key Design Decisions
 - **No live patching**: All boot image patching happens in BUILD stage (`release/build_release.py`), not on end-user devices
-- **Multi-device**: Device profiles in `devices/` (TOML). Add any Unisoc SPRD device by creating a new profile.
+- **Multi-device + Multi-chipset**: Device profiles in `devices/` (TOML). Add any device (SPRD, MediaTek, Qualcomm) by creating a new profile.
 - **CLI is orchestrator only**: `cli.py` just imports modules — no inline patching logic
 - **Safer flashing**: `flash_kernelsu()` does `fastboot boot` (test) before `fastboot flash` (commit)
 - **Checksum verification**: Release artifacts include SHA256 in `metadata.txt`, verified before flash
@@ -128,7 +133,7 @@ realme-c53-unlock-root/
 | Backup | `D:\realme-c53-unlock-root\output\backup\` |
 | Stock boot | `D:\realme-c53-unlock-root\output\backup\stock_boot_*.img` |
 | Release artifacts | `D:\realme-c53-unlock-root\release\runtime\` |
-| Unlock tool | `D:\realme-c53-unlock-root\tools\unlock\` (CVE-2022-38694) |
+| Unlock tool | `D:\realme-c53-unlock-root\tools\unlock\sprd\` (CVE-2022-38694) |
 | SPRD driver | `D:\realme-c53-unlock-root\tools\driver\` |
 | Kernel source | `https://github.com/realme-kernel-opensource/realme_C51_C53_Note50_C60_C51_N53-AndroidU-kernel-source` |
 
@@ -222,17 +227,29 @@ python cli.py  # select menu 4
 # when phone is in download mode
 ```
 
-## Workflow D: Unlock Bootloader (CVE-2022-38694)
+## Workflow D: Unlock Bootloader
 
 Use when: user wants to unlock the bootloader.
+The CLI auto-selects the correct method based on the device profile (SPRD, MediaTek, Qualcomm).
 
-### Prerequisites
-- SPRD driver installed (Workflow C)
+### Prerequisites (all chipsets)
+- Correct USB driver installed (Workflow C)
 - Phone OFF, USB cable connected
+
+### Quick method (all chipsets)
+```bash
+export MSYS2_ARG_CONV_EXCL="*"
+python cli.py            # select menu 5
+# CLI will detect chipset from profile and show appropriate steps
+```
+
+### SPRD-specific manual method (CVE-2022-38694)
+
+#### Prerequisites
+- SPRD driver installed (Workflow C)
 - Windows PC (spd_dump.exe is Windows-only)
 
-### Steps
-
+#### Steps
 ```bash
 # 0. Set path fix (Git Bash)
 export MSYS2_ARG_CONV_EXCL="*"
@@ -242,7 +259,7 @@ export MSYS2_ARG_CONV_EXCL="*"
 # Device should show as SPRD U2S Diag (COM3)
 
 # 2. Navigate to unlock tool
-cd tools/unlock
+cd tools/unlock/sprd
 
 # 3. Dump bootchain partitions
 spd_dump.exe dump 0x00000000 0x00002000 pgpt.bin
@@ -257,10 +274,9 @@ spd_dump.exe erase 0x00002000 0x00006000
 spd_dump.exe write 0x00002000 rmx3762/fdl2-cboot.bin
 
 # 6. ⚠️ SCREWDRIVER TRICK
-# Tell user:
-#   "Hold BOTH volume keys, tap power button for 1 second, release power.
-#    Keep holding volume keys. Press Enter when ready."
-input "Press Enter after screwdriver trick..."
+# Hold BOTH volume keys, tap power button for 1 second, release power.
+# Keep holding volume keys.
+input "Press Enter when ready..."
 
 # 7. Execute unlock payload
 spd_dump.exe write 0x00002000 spl-unlock.bin
@@ -278,6 +294,29 @@ spd_dump.exe dump 0x0000e000 0x00000001 miscdata.bin
 cd ../..
 ```
 
+### MediaTek manual method (BROM mode)
+```bash
+# 0. Install mtkclient
+pip install mtkclient
+
+# 1. Enter BROM mode
+# Power off → hold vol up/down → connect USB
+
+# 2. Unlock
+mtk da seccfg unlock
+```
+
+### Qualcomm manual method (EDL / fastboot)
+```bash
+# For OEM unlock enabled devices:
+adb reboot bootloader
+fastboot flashing unlock
+
+# For EDL mode (requires firehose programmer):
+pip install edl
+edl --loader=prog_ufs_firehose_*.elf unlock
+```
+
 ### After Unlock
 - Phone will factory reset (this is normal)
 - Guide user to set up Android
@@ -286,11 +325,13 @@ cd ../..
 
 ### Troubleshooting
 | Problem | Fix |
-|---------|-----|
-| "No device found" | Install/reinstall SPRD driver, check COM port |
+|---------|------|
+| "No device found" | Install/reinstall driver, check COM port |
 | "Connection failed" | Try different USB port, use USB 2.0 |
-| Phone not detected after screwdriver | Repeat step 1-6, hold vol keys tighter |
-| miscdata.bin is all zeros | Unlock failed, repeat from step 3 |
+| SPRD: Phone not detected after screwdriver | Repeat step 1-6, hold vol keys tighter |
+| SPRD: miscdata.bin is all zeros | Unlock failed, repeat from step 3 |
+| MTK: BROM mode not detected | Install MediaTek DA driver |
+| QCOM: EDL mode not detected | Install Qualcomm QDLoader driver |
 
 ## Workflow E: Backup Stock Boot Image
 
