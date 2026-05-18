@@ -6,12 +6,10 @@ on:
         description: 'Extra vermagic suffix. Leave empty for 5.15.178-android13-8'
         required: false
         default: ''
-        type: string
       stock_boot_url:
         description: 'URL to download stock boot.img (for full release with ready-to-flash image)'
         required: false
         default: ''
-        type: string
 
 jobs:
   build:
