@@ -73,6 +73,9 @@ jobs:
           echo "vermagic=$(modinfo -F vermagic "$KSU_KO")" >> "$GITHUB_OUTPUT"
           mkdir -p staging/kernelsu
           cp "$KSU_KO" staging/kernelsu/
-      - name: Build patched boot image
-        if: inputs.stock_boot_url != ''
-        run: echo test
+      - name: Package release
+        run: |
+          mkdir -p staging/complete
+          cp staging/kernelsu/kernelsu.ko staging/complete/
+          cd staging/complete
+          zip -r "../../RMX3760_KernelSU_Release.zip" ./*
