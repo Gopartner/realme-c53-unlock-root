@@ -102,12 +102,78 @@ jobs:
           cp staging/kernelsu/kernelsu.ko staging/complete/
           cp -r repo/tools/unlock staging/complete/unlock/
           cp -r repo/tools/apk staging/complete/apk/
+          cp -r repo/tools/modules staging/complete/modules/
           cp repo/release/build/flash.bat staging/complete/
+          cp repo/release/build/flash.sh staging/complete/
           cat > staging/complete/README.txt << 'EOF'
-          Realme C53 (RMX3760) KernelSU Release
-          ======================================
-          Kernel: 5.15.178-android13-8
-          EOF
+===========================================
+ Realme C53 (RMX3760) Complete Root Toolkit
+===========================================
+
+Kernel: 5.15.178-android13-8
+
+=== CONTENTS ===
+
+kernelsu.ko                  - KernelSU LKM module (build for YOUR device)
+unlock/                      - Bootloader unlock tools (CVE-2022-38694)
+apk/KernelSU_Next.apk        - KernelSU Next root manager app
+apk/Magisk-v27.0.apk         - Magisk v27 (stable, recommended)
+apk/Magisk-v30.7.apk         - Magisk v30.7 (experimental)
+modules/ksu_loader/          - Magisk module for hybrid root
+flash.bat                    - One-click flash script (Windows)
+flash.sh                     - One-click flash script (Linux/Mac)
+
+=== TWO ROOT METHODS ===
+
+Option A - Hybrid Magisk+KSU (RECOMMENDED for RMX3760)
+
+Step 1: Flash Magisk boot
+  adb reboot bootloader
+  fastboot flash boot_a apk/Magisk-v27.0.apk (patch first with Magisk app)
+  fastboot flash boot_b boot_patched.img
+  fastboot reboot
+
+Step 2: Install Magisk module ksu_loader
+  Push modules/ksu_loader/ksu_loader_v2.zip to phone
+  Open Magisk app -> Modules -> Install from storage -> select zip
+  Reboot
+
+Step 3: Install KernelSU Next app
+  adb install apk/KernelSU_Next.apk
+
+Option B - KernelSU LKM only
+
+Step 1: Patch stock boot with kernelsu.ko
+  python release/build_release.py --kernelsu kernelsu.ko --stock stock_boot.img
+
+Step 2: Flash (test-boot first for safety)
+  adb reboot bootloader
+  fastboot boot kernelsu_patched_boot.img   # TEST FIRST
+  fastboot flash boot_a kernelsu_patched_boot.img
+  fastboot flash boot_b kernelsu_patched_boot.img
+  fastboot reboot
+
+Step 3: Install KernelSU Next app
+  adb install apk/KernelSU_Next.apk
+
+=== BOOTLOADER UNLOCK (first time only) ===
+
+1. Install SPRD driver
+2. Power off phone, connect USB
+3. Run commands in unlock/ folder per instructions
+4. Phone will factory reset
+
+=== VERIFY ROOT ===
+
+adb shell su -c id
+# Should show: uid=0(root)
+
+=== CREDITS ===
+
+Built with: https://github.com/Gopartner/realme-c53-unlock-root
+Exploit: TomKing062 (CVE-2022-38694)
+Root: KernelSU-Next, topjohnwu/Magisk
+EOF
           cd staging/complete
           zip -r "../../RMX3760_KernelSU_Release.zip" ./*
 
@@ -124,8 +190,29 @@ jobs:
         run: |
           VERMAGIC="${{ steps.extract.outputs.vermagic }}"
           TAG_NAME="release-$(date +'%Y%m%d-%H%M%S')"
+          NOTES="## RMX3760 Complete Root Toolkit
+          **Kernel:** 5.15.178-android13-8
+          **Vermagic:** $VERMAGIC
+
+          ### Included
+          | Item | Description |
+          |------|-------------|
+          | kernelsu.ko | KernelSU LKM (built for YOUR device) |
+          | unlock/ | Bootloader unlock tools (CVE-2022-38694) |
+          | apk/ | KernelSU Next + Magisk v27 + v30.7 |
+          | modules/ksu_loader/ | Magisk module for hybrid KSU root |
+          | flash.bat / flash.sh | One-click flash scripts |
+          | README.txt | Full instructions"
+
+          if [ -n "${{ inputs.stock_boot_url }}" ]; then
+            NOTES="$NOTES
+
+          ### Patched boot image included
+          kernelsu_patched_boot.img is included (ready to flash)."
+          fi
+
           gh release create "$TAG_NAME" \
             --repo "${{ github.repository }}" \
             --title "RMX3760 Release $TAG_NAME" \
-            --notes "**Vermagic:** $VERMAGIC" \
+            --notes "$NOTES" \
             RMX3760_KernelSU_Release.zip
