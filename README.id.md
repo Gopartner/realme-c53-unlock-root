@@ -23,6 +23,32 @@ Tidak perlu setup environment build kernel. Semua berjalan di cloud GitHub.
 
 ---
 
+## Dua Cara Pakai
+
+### 🟢 Jalur A — Pakai Release yang Sudah Ada (Tanpa Build)
+
+Jika sudah ada yang build untuk device/kernel yang sama, tinggal download Release-nya:
+
+```
+Download kernelsu.ko dari GitHub Release yang sudah ada
+  → Taruh di downloads/kernelsu.ko
+  → Ikuti "Panduan Cepat" dari Langkah 2
+```
+
+Tidak perlu akun GitHub atau fork. Syarat: versi kernel harus cocok (vermagic sama).
+
+### 🔵 Jalur B — Build Sendiri (Direkomendasikan)
+
+Build kernel module pribadi — Release Anda, backup Anda:
+
+```
+Fork repo ini → Jalankan GitHub Actions → Dapatkan Release SENDIRI
+  → Download kernelsu.ko dari Release Anda
+  → Ikuti "Panduan Cepat" dari Langkah 2
+```
+
+---
+
 ## 📋 Kompatibilitas Device
 
 | Model | SoC | Kernel | Status |

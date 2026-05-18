@@ -23,6 +23,32 @@ No need to set up a kernel build environment. Everything runs in GitHub's cloud.
 
 ---
 
+## Two Ways to Use
+
+### 🟢 Path A — Use an Existing Release (No Build)
+
+If someone has already built for the same device/kernel, just download their Release:
+
+```
+Download kernelsu.ko from an existing GitHub Release
+  → Place it in downloads/kernelsu.ko
+  → Follow "Quick Start" from Step 2
+```
+
+No GitHub account or fork needed. Only prerequisite: matching kernel version (vermagic).
+
+### 🔵 Path B — Build Your Own (Recommended)
+
+Build your own personal kernel module — your Release, your backup:
+
+```
+Fork this repo → Run GitHub Actions → Get YOUR Release
+  → Download kernelsu.ko from your own Release
+  → Follow "Quick Start" from Step 2
+```
+
+---
+
 ## 📋 Device Compatibility
 
 | Model | SoC | Kernel | Status |
