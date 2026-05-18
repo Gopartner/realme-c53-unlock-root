@@ -2,6 +2,7 @@ from .validation import check_environment, validate_device
 from .backup import backup_boot
 from .driver import install_driver
 from .flash import flash_kernelsu, verify_root
+from .unlock import unlock_bootloader
 from .metadata import display_metadata, parse_metadata
 from .logger import get_logger
 
@@ -20,9 +21,10 @@ def menu() -> str:
   2) Validate device
   3) Backup stock boot image
   4) Install SPD driver
-  5) Flash KernelSU (with test-boot)
-  6) Verify root access
-  7) Show release metadata
+  5) Unlock bootloader (CVE-2022-38694)
+  6) Flash KernelSU (with test-boot)
+  7) Verify root access
+  8) Show release metadata
 
   q) Quit
 """)
@@ -43,10 +45,12 @@ def main():
             elif choice == "4":
                 install_driver()
             elif choice == "5":
-                flash_kernelsu()
+                unlock_bootloader()
             elif choice == "6":
-                verify_root()
+                flash_kernelsu()
             elif choice == "7":
+                verify_root()
+            elif choice == "8":
                 try:
                     display_metadata(parse_metadata())
                 except Exception as e:

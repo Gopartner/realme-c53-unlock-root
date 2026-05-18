@@ -23,7 +23,7 @@ python release/build/verify_release.py
 
 # 4. Jalankan CLI tool (end-user)
 python cli.py
-# Menu: 1) check env → 2) validate device → 3) backup → 4) driver → 5) flash KernelSU → 7) verify
+# Menu: 1) check env → 2) validate device → 3) backup → 4) driver → 5) unlock → 6) flash KernelSU → 7) verify
 ```
 
 ### Alur kerja utama
@@ -32,7 +32,8 @@ python cli.py
 |-------|----------|-----------------|
 | **Developer** | `python release/build_release.py --kernelsu kernelsu.ko --stock ...` | Patch stock boot dengan KernelSU LKM, simpan ke `release/runtime/` + `metadata.txt` |
 | **Developer** | `python release/build/verify_release.py` | Cek SHA256 semua artifact di `release/runtime/` cocok dengan `metadata.txt` |
-| **End-user** | `python cli.py` → pilih 5 | Flash KernelSU image (test-boot dulu, baru commit) |
+| **End-user** | `python cli.py` → pilih 5 | Unlock bootloader via CVE-2022-38694 (SPRD diag mode) |
+| **End-user** | `python cli.py` → pilih 6 | Flash KernelSU image (test-boot dulu, baru commit) |
 | **Pertama kali buka repo** | `python cli.py` | Python stdlib only, no dependencies |
 
 ## Working Directory
