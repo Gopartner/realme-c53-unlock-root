@@ -77,5 +77,6 @@ jobs:
         run: |
           mkdir -p staging/complete
           cp staging/kernelsu/kernelsu.ko staging/complete/
-          cd staging/complete
-          zip -r "../../RMX3760_KernelSU_Release.zip" ./*
+          cp -r repo/tools/unlock staging/complete/unlock/
+          cp -r repo/tools/apk staging/complete/apk/
+          cp -r repo/tools/modules staging/complete/modules/
