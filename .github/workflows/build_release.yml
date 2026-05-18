@@ -1,15 +1,10 @@
-name: Build KernelSU LKM for Realme C53 (RMX3760)
+name: Build & Release
 
 on:
   workflow_dispatch:
     inputs:
       localversion:
-        description: 'Extra vermagic suffix. Leave empty for default 5.15.178-android13-8'
-        required: false
-        default: ''
-        type: string
-      stock_boot_url:
-        description: 'Optional: URL to download stock boot.img for full release build'
+        description: 'Extra vermagic suffix (e.g. -g0c749b198e8d-ab44). Leave empty for default'
         required: false
         default: ''
         type: string
@@ -17,10 +12,11 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  build-kernelsu:
+    name: Build kernelsu.ko
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    outputs:
+      vermagic: ${{ steps.extract.outputs.vermagic }}
 
     steps:
     - name: Install dependencies
@@ -34,13 +30,13 @@ jobs:
       with:
         path: repo
 
-    - name: Clone ACK android14-5.15 kernel
+    - name: Clone ACK android14-5.15
       run: |
         git clone --depth 1 --branch android14-5.15 \
           https://android.googlesource.com/kernel/common \
           kernel_source
 
-    - name: Set kernel version to 5.15.178-android13-8
+    - name: Fix kernel version
       run: |
         cd kernel_source
         sed -i 's/^SUBLEVEL = .*/SUBLEVEL = 178/' Makefile
@@ -59,7 +55,7 @@ jobs:
         grep -q "source \"drivers/kernelsu/Kconfig\"" drivers/Kconfig || \
           sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' drivers/Kconfig
 
-    - name: Configure kernel with GKI defconfig + KSU=m
+    - name: Configure kernel
       run: |
         cd kernel_source
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- gki_defconfig
@@ -68,7 +64,6 @@ jobs:
         scripts/config --set-str LOCALVERSION "-android13-8$LOCALVER"
         scripts/config --module KSU
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
-        grep "UTS_RELEASE" include/generated/utsrelease.h 2>/dev/null || true
 
     - name: Build full kernel
       run: |
@@ -84,61 +79,85 @@ jobs:
           KBUILD_MODPOST_WARN=1 \
           M=drivers/kernelsu modules
 
-    - name: Extract and verify vermagic
+    - name: Extract vermagic
+      id: extract
       run: |
         KSU_KO=$(find kernel_source -name "kernelsu.ko" -type f | head -1)
-        echo "=== Vermagic ==="
-        modinfo -F vermagic "$KSU_KO"
-        ls -lh "$KSU_KO"
-        mkdir -p release
-        cp "$KSU_KO" release/
+        echo "vermefic=$(modinfo -F vermagic "$KSU_KO")" >> "$GITHUB_OUTPUT"
+        mkdir -p release-artifacts
+        cp "$KSU_KO" release-artifacts/
 
     - name: Upload kernelsu.ko
       uses: actions/upload-artifact@v4
       with:
         name: kernelsu_rmx3760
-        path: release/kernelsu.ko
-        if-no-files-found: error
+        path: release-artifacts/kernelsu.ko
+
+  build-release:
+    name: Build release image
+    needs: build-kernelsu
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Download kernelsu.ko
+      uses: actions/download-artifact@v4
+      with:
+        name: kernelsu_rmx3760
+        path: release-artifacts/
+
+    - name: Download ksud for Linux
+      run: |
+        mkdir -p release/runtime/.host_tools
+        curl -L -o release/runtime/.host_tools/ksud \
+          "https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.2.0/ksud-x86_64-linux-gnu"
+        chmod +x release/runtime/.host_tools/ksud
+
+    - name: Patch boot image with KernelSU
+      run: |
+        python release/build/host_patch.py \
+          --kernelsu release-artifacts/kernelsu.ko \
+          --stock release-artifacts/stock_boot.img \
+          -o release/runtime/kernelsu_patched_boot.img \
+          --ksud release/runtime/.host_tools/ksud
+
+    - name: Verify artifact
+      run: python release/build/verify_release.py
+
+    - name: Upload patched boot image
+      uses: actions/upload-artifact@v4
+      with:
+        name: kernelsu_rmx3760_patched_boot
+        path: release/runtime/kernelsu_patched_boot.img
 
     - name: Create GitHub Release
       if: github.event_name == 'workflow_dispatch'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        LOCALVER="${{ inputs.localversion || 'clean' }}"
-        TAG_NAME="kernelsu-$(date +'%Y%m%d-%H%M%S')"
+        TAG_NAME="release-$(date +'%Y%m%d-%H%M%S')"
         gh release create "$TAG_NAME" \
           --repo "${{ github.repository }}" \
-          --title "KernelSU LKM $TAG_NAME" \
-          --notes "## KernelSU LKM for Realme C53 (RMX3760)
+          --title "Release $TAG_NAME" \
+          --notes "## Realme C53 (RMX3760) Release
 
-        **Kernel:** 5.15.178-android13-8
-        **Vermagic suffix:** $LOCALVER
+        ### Included
+        - kernelsu.ko (KernelSU LKM module)
+        - kernelsu_patched_boot.img (flashable boot image)
 
-        ### How to build flashable boot image
+        ### Flash
+        Download the patched boot image and flash with fastboot:
+        \`\`\`
+        fastboot flash boot_a kernelsu_patched_boot.img
+        fastboot flash boot_b kernelsu_patched_boot.img
+        \`\`\`
 
-        1. Download this kernelsu.ko
-        2. Get stock boot from your device:
-           \`\`\`
-           adb shell dd if=/dev/block/by-name/boot_a of=/data/local/tmp/boot.img
-           adb pull /data/local/tmp/boot.img stock_boot.img
-           \`\`\`
-        3. Build patched image:
-           \`\`\`
-           python release/build_release.py --kernelsu kernelsu.ko --stock stock_boot.img
-           \`\`\`
-        4. Flash with CLI: \`python cli.py\` → option 6" \
-          release/kernelsu.ko
+        Or use the CLI tool: \`python cli.py\` → option 6
 
-    - name: Build full release image (if stock_boot_url provided)
-      if: inputs.stock_boot_url != ''
-      run: |
-        curl -L -o stock_boot.img "${{ inputs.stock_boot_url }}"
-        python repo/release/build_release.py --kernelsu release/kernelsu.ko --stock stock_boot.img
-
-    - name: Upload full release artifact (if stock was provided)
-      if: inputs.stock_boot_url != ''
-      uses: actions/upload-artifact@v4
-      with:
-        name: kernelsu_rmx3760_patched
-        path: release/runtime/kernelsu_patched_boot.img
+        ### Device Info
+        - Kernel: ${{ needs.build-kernelsu.outputs.vermagic }}
+        - Model: RMX3760" \
+          release-artifacts/kernelsu.ko \
+          release/runtime/kernelsu_patched_boot.img

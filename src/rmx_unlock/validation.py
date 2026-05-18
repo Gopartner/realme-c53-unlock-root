@@ -1,4 +1,5 @@
 import hashlib
+import os
 import shutil
 
 from .config import DEVICE_MODEL

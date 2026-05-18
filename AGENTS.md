@@ -35,6 +35,9 @@ python cli.py
 | **Developer** | `python release/build_release.py --kernelsu kernelsu.ko --stock ...` | Patch stock boot dengan KernelSU LKM, simpan ke `release/runtime/` + `metadata.txt` |
 | **Developer** | `python release/build_release.py --magisk Magisk-v30.7.apk --stock ...` | Patch stock boot dengan Magisk, simpan ke `release/runtime/` + `metadata.txt` |
 | **Developer** | `python release/build/verify_release.py` | Cek SHA256 semua artifact di `release/runtime/` cocok dengan `metadata.txt` |
+| **Developer** | `python release/build/host_patch.py --kernelsu ksu.ko --stock boot.img` | Patch boot tanpa ADB/device (host-side, Linux x86_64) |
+| **Developer** | `python -m pytest tests/ -v` | Jalankan unit tests |
+| **Developer** | `pre-commit run --all-files` | Lint & format check |
 | **End-user** | `python cli.py` → pilih 5 | Unlock bootloader via CVE-2022-38694 (SPRD diag mode) |
 | **End-user** | `python cli.py` → pilih 6 | Flash KernelSU image (test-boot dulu, baru commit) |
 | **End-user** | `python cli.py` → pilih 7 | Flash Magisk image (langsung flash kedua slot) |
