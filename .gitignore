@@ -24,9 +24,9 @@ toolchain/
 
 *.img
 
-# Build outputs
+# Build outputs (runtime artifacts only; build scripts are tracked)
 output/
-release/
+release/runtime/
 
 # Downloads
 downloads/
@@ -53,3 +53,7 @@ tmp/
 # Python
 __pycache__/
 *.pyc
+*.egg-info/
+dist/
+build/
+.pytest_cache/

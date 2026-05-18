@@ -11,19 +11,57 @@
 
 ## Working Directory
 ```
-D:\Realme-C-project\
+D:\realme-c53-unlock-root\
 ```
 
-## Key Paths
+## Repository Architecture (Refactored v2.0.0)
+
+### Structure
+```
+D:\realme-c53-unlock-root\
+├── src/rmx_unlock/          # Modular Python package (all logic)
+│   ├── __init__.py          # Package metadata
+│   ├── __main__.py          # `python -m src.rmx_unlock`
+│   ├── config.py            # Paths, constants, device info
+│   ├── logger.py            # Structured logging (sessions)
+│   ├── adb.py               # ADB & Fastboot wrappers
+│   ├── validation.py        # Env/device checks, SHA256 verify
+│   ├── backup.py            # Stock boot image backup
+│   ├── flash.py             # Safer flashing with test-boot
+│   ├── metadata.py          # Release metadata parser
+│   ├── driver.py            # SPD driver installer
+│   ├── exceptions.py        # Custom exception hierarchy
+│   └── cli.py               # Thin orchestrator menu
+├── release/
+│   ├── build_release.py     # BUILD STAGE: patch stock→release images
+│   └── build/
+│       └── verify_release.py# Verify integrity of release artifacts
+├── cli.py                   # Thin entry point (calls src/rmx_unlock)
+├── pyproject.toml            # Package metadata
+├── output/
+│   ├── backup/              # Stock boot backups
+│   └── logs/                # Session logs
+└── tools/
+    ├── unlock/              # CVE-2022-38694 unlock tool
+    ├── apk/                 # Magisk APK, KernelSU APK
+    └── driver/              # SPRD driver
+```
+
+### Key Design Decisions
+- **No live patching**: All boot image patching happens in BUILD stage (`release/build_release.py`), not on end-user devices
+- **CLI is orchestrator only**: `cli.py` just imports modules — no inline patching logic
+- **Safer flashing**: `flash_kernelsu()` does `fastboot boot` (test) before `fastboot flash` (commit)
+- **Checksum verification**: Release artifacts include SHA256 in `metadata.txt`, verified before flash
+- **Structured logging**: All sessions logged to `output/logs/session_YYYYMMDD.log` with CMD/INFO/WARN/ERROR levels
+
+## Key Paths (Old — for reference, some may still exist)
 | Item | Path |
 |------|------|
-| Backup | `D:\Realme-C-project\backup\` |
-| Stock boot | `D:\Realme-C-project\backup\stock_boot.img` (64 MB) |
-| Unlock state | `D:\Realme-C-project\backup\unlock_state\` (partition dumps) |
-| Unlock tool | `D:\Realme-C-project\unlock_tool\` (CVE-2022-38694) |
-| KernelSU files | `D:\Realme-C-project\ksu\` |
-| Magisk-patched boot | `D:\Realme-C-project\ksu\magisk_patched_boot.img` |
-| SPRD driver | `D:\Realme-C-project\sprd_driver\` |
+| Backup | `D:\realme-c53-unlock-root\output\backup\` |
+| Stock boot | `D:\realme-c53-unlock-root\output\backup\stock_boot_*.img` |
+| Release artifacts | `D:\realme-c53-unlock-root\release\runtime\` |
+| Unlock tool | `D:\realme-c53-unlock-root\tools\unlock\` (CVE-2022-38694) |
+| SPRD driver | `D:\realme-c53-unlock-root\tools\driver\` |
 | Kernel source | `https://github.com/realme-kernel-opensource/realme_C51_C53_Note50_C60_C51_N53-AndroidU-kernel-source` |
 
 ## Git Bash Path Mangling Fix
@@ -33,26 +71,58 @@ export MSYS2_ARG_CONV_EXCL="*"
 # Then run adb commands normally
 ```
 
-## Step 1: Backup Data
+## Release Build Pipeline (Developer)
+
+Patching is done in BUILD stage — NOT on end-user devices:
+
 ```bash
-adb shell "mkdir -p /sdcard/backup_media && cp -r /sdcard/DCIM /sdcard/backup_media/ && cp -r /sdcard/Pictures /sdcard/backup_media/ && cp -r /sdcard/Download /sdcard/backup_media/ && cp -r /sdcard/WhatsApp /sdcard/backup_media/" 2>/dev/null
-adb pull //sdcard/backup_media/ "D:/Realme-C-project/backup/"
-# Enable Google Backup
-adb shell "settings put secure backup_enabled 1 && bmgr run"
-# Backup WhatsApp manually via app → Chats → Chat backup → Back up
+# Build all available release artifacts
+python release/build_release.py --all
+
+# Or specify individual components
+python release/build_release.py --magisk tools/apk/Magisk-v30.7.apk --stock output/backup/stock_boot_20250101_120000.img
+python release/build_release.py --kernelsu kernelsu.ko --stock output/backup/stock_boot_20250101_120000.img
+
+# Verify release artifacts
+python release/build/verify_release.py
+```
+
+Output goes to `release/runtime/` with `metadata.txt` containing SHA256 checksums.
+
+## End-User Flow (CLI Tool)
+
+```bash
+python cli.py
+# Menu options:
+#   1) Check environment (adb/fastboot)
+#   2) Validate device (RMX3760 check)
+#   3) Backup stock boot image
+#   4) Install SPD driver
+#   5) Flash KernelSU (with test-boot safety)
+#   6) Flash Magisk
+#   7) Verify root access
+#   8) Show release metadata
+```
+
+## Step 1: Backup Data (Manual)
+```bash
+export MSYS2_ARG_CONV_EXCL="*"
+adb shell "mkdir -p /sdcard/backup_media && cp -r /sdcard/DCIM /sdcard/backup_media/ && cp -r /sdcard/Pictures /sdcard/backup_media/ && cp -r /sdcard/Download /sdcard/backup_media/"
+adb pull //sdcard/backup_media/ "D:/realme-c53-unlock-root/backup/"
 ```
 
 ## Step 2: Unlock Bootloader (CVE-2022-38694)
 **Tool**: `https://github.com/TomKing062/CVE-2022-38694_unlock_bootloader` (release 1.72)
 
 ### Prerequisites
-- Install SPRD driver (`D:\Realme-C-project\sprd_driver\`)
+- Install SPRD driver (CLI option 4 or manual `D:\realme-c53-unlock-root\tools\driver\`)
 - Device shows as **SPRD U2S Diag (COM3)** in Device Manager
 - `spd_dump.exe` needs `Channel9.dll` and `Channel.ini` in working dir
 
 ### Sub-steps
 1. **Dump partitions**:
    ```
+   cd tools\unlock
    spd_dump.exe dump 0x00000000 0x00002000 pgpt.bin
    spd_dump.exe dump 0x00002000 0x00006000 splloader.bin  
    spd_dump.exe dump 0x0000c000 0x00004000 uboot_a.bin
@@ -73,45 +143,38 @@ adb shell "settings put secure backup_enabled 1 && bmgr run"
    ```
 7. **Verify**: `spd_dump.exe dump 0x0000e000 0x00000001 miscdata.bin` → non-zero = unlocked
 
-## Step 3: Dump Stock Boot
-```bash
-adb shell "dd if=/dev/block/by-name/boot_a of=/data/local/tmp/boot.bin"
-adb pull //data/local/tmp/boot.bin "D:\Realme-C-project\backup\stock_boot.img"
-```
-
-## Step 4: Root with Magisk
-### Prerequisites
-- Download Magisk APK v30.7+ from `https://github.com/topjohnwu/Magisk/releases`
-- Extract magiskboot, magiskinit, magisk, magiskpolicy, busybox, init-ld from APK
-
-### Patch Boot Image
+## Step 3: Dump Stock Boot (CLI option 3)
 ```bash
 export MSYS2_ARG_CONV_EXCL="*"
-# Push stock boot and Magisk files to phone
-adb push "D:\Realme-C-project\backup\stock_boot.img" /data/local/tmp/boot.img
-adb push files... /data/local/tmp/magisk/
-adb shell chmod 755 /data/local/tmp/magisk/*
-# Run boot_patch.sh
-adb shell /data/local/tmp/magisk/boot_patch.sh /data/local/tmp/boot.img
-# Pull patched image
-adb pull /data/local/tmp/magisk/new-boot.img "D:\Realme-C-project\ksu\magisk_patched_boot.img"
+python cli.py  # then choose option 3
+# Or manually:
+adb shell "dd if=/dev/block/by-name/boot_a of=/data/local/tmp/boot.img"
+adb pull //data/local/tmp/boot.img "D:/realme-c53-unlock-root/output/backup/stock_boot_$(date +%Y%m%d_%H%M%S).img"
 ```
 
-### Flash
+## Step 4: Root with Magisk (Build Stage)
 ```bash
-adb reboot bootloader
-fastboot flash boot_a "D:\Realme-C-project\ksu\magisk_patched_boot.img"
-fastboot flash boot_b "D:\Realme-C-project\ksu\magisk_patched_boot.img"
-fastboot reboot
+# BUILD: patch stock boot → release artifact
+python release/build_release.py --magisk tools/apk/Magisk-v30.7.apk --stock output/backup/stock_boot_*.img
+
+# FLASH on device:
+python cli.py  # option 6
 ```
 
-### Grant Root Permission
+## Step 5: Root with KernelSU (Build Stage)
 ```bash
-adb shell su -c id  # Will show "Accessed denied" until granted
-```
-- Open **Magisk** on phone → **Superuser** tab → Grant **Shell**
-- Or: `adb shell /data/local/tmp/magisk/magisk --sqlite "UPDATE policies SET policy=2 WHERE package_name='com.android.shell'"`
+# BUILD: patch stock boot with kernelsu.ko → release artifact
+python release/build_release.py --kernelsu kernelsu.ko --stock output/backup/stock_boot_*.img
 
+# FLASH on device (with test-boot safety):
+python cli.py  # option 5
+```
+
+## Grant Root Permission
+```bash
+adb shell su -c id  # Will show "Access denied" until granted
+```
+- Open **Magisk** (or KernelSU Next) on phone → **Superuser** tab → Grant **Shell
 ## Kernel Source Notes
 - **`kernel_source/`** = Realme GPL source (Linux **5.4.254**) — WRONG version, device runs 5.15.178
 - **`kernel_ack_5.15/`** = ACK android14-5.15 (**5.15.178-android13-8**) — correct base for KernelSU LKM build
@@ -135,3 +198,8 @@ adb shell su -c id  # Will show "Accessed denied" until granted
 - Pre-built KernelSU LKM modules are incompatible (vermagic mismatch: 5.15.202 vs 5.15.178)
 - Always flash BOTH boot_a and boot_b for slot safety
 - `fastboot flash boot` fails — use `fastboot flash boot_a` / `fastboot flash boot_b`
+- **Refactored v2.0.0**: CLI is orchestrator only; patching moved to `release/build_release.py` (BUILD stage)
+- **Safer flashing**: `flash_kernelsu()` tests boot via `fastboot boot` before flashing
+- **Checksums**: Release artifacts verified against `release/runtime/metadata.txt` before any flash
+- **Module location**: All logic lives in `src/rmx_unlock/`, root `cli.py` is thin entry point
+- `python release/build_release.py --all` to regenerate all patched images from stock boot
