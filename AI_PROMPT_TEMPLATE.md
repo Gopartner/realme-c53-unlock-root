@@ -143,6 +143,9 @@ Tampilkan semua informasinya. Jelaskan apa artinya masing-masing.
 - Kasih prompt yang jelas — mau root total, atau cuma unlock, atau cuma build
 - Kalau error — paste mentahan error message nya
 - Setiap langkah, kamu harus konfirmasi dulu sebelum AI lanjut
+- **Untuk AI agent**: Baca AGENTS.md dulu. Jangan pernah janjiin fitur yang
+  tidak ada di repo ini. Kalau user minta sesuatu di luar scope, bilang
+  jujur dan kasih alternatif yang realistis.
 
 ---
 

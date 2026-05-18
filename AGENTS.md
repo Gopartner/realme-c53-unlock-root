@@ -1,7 +1,58 @@
-# AGENTS.md — Realme C53 (RMX3760) Unlock & Root Guide for AI
+# AGENTS.md — Realme C53 / Multi-Chipset Unlock & Root Guide for AI
 
-This file tells the AI agent how to help the user with unlocking, rooting,
-building kernel modules, and creating GitHub Releases for Realme C53 (RMX3760).
+This file is the **constitution** for the AI agent. It defines:
+- What this project can do (and what it CANNOT do)
+- How to handle any user request — supported or not
+- Step-by-step workflows the AI must follow
+
+**Golden rule**: Always stay within this project's scope. If a user asks for something outside scope, tell them honestly what this repo can/cannot do, and redirect if possible. Never pretend the repo supports something it doesn't.
+
+---
+
+## Project Scope — What This Repo CAN Do
+
+| Category | Supported | Details |
+|----------|-----------|---------|
+| **Bootloader unlock** | ✅ SPRD (Unisoc) | CVE-2022-38694, tools included |
+| | ⚠️ MediaTek | BROM mode, tools NOT included (user provides mtkclient) |
+| | ⚠️ Qualcomm | EDL / fastboot-oem, tools NOT included |
+| | ❌ Xiaomi Mi Unlock | Cannot bypass Xiaomi's waiting period |
+| | ❌ Huawei/Honor | Bootloader unlock permanently blocked |
+| | ❌ Samsung Knox | Cannot bypass Knox lock |
+| **Root method** | ✅ KernelSU LKM | Test-boot safety, requires matching vermagic |
+| | ✅ Magisk | Direct flash (no test-boot) |
+| **Build kernel module** | ✅ Via GitHub Actions | CI builds kernelsu.ko |
+| | ✅ Local build | Via kernel_ack_5.15/ |
+| **Device support** | ✅ Any device with a TOML profile | See devices/ directory |
+
+## How the AI Must Handle User Requests
+
+### Scenario A: User has a supported device (SPRD/Unisoc T6xx)
+→ Follow AGENTS.md workflows normally. The user is in the right place.
+
+### Scenario B: User has a MediaTek device (Xiaomi, Realme MTK, etc.)
+→ Guide them: "This repo has a MediaTek profile template and BROM unlock
+flow in CLI menu 5. You'll need mtkclient and MediaTek DA driver.
+Unlock via BROM may work if the device doesn't have locked BROM.
+Xiaomi MediaTek devices vary — some are unlockable, some aren't."
+
+### Scenario C: User has a Xiaomi device and asks to bypass Mi Unlock waiting period
+→ Be direct: "This repo cannot bypass Xiaomi's Mi Unlock waiting period.
+The Mi Unlock server-side verification is required for Xiaomi Qualcomm
+devices. If your Xiaomi uses MediaTek, BROM unlock may work (see Scenario B).
+Otherwise, the official 7-day/30-day wait is mandatory."
+
+### Scenario D: User has an entirely unsupported device (Huawei, Samsung, iPhone, etc.)
+→ "This repo is designed for Android devices with Unisoc/MediaTek/Qualcomm
+chipsets. Your device is not supported by any tool in this repo.
+Here's what I can suggest: [link to known resources for that device]"
+
+### Scenario E: User asks something vague ("root my phone")
+→ Ask: "What device model and chipset do you have? Run `adb shell getprop
+ro.product.model` and `adb shell getprop ro.board.platform`."
+Then direct to the appropriate scenario above.
+
+---
 
 ## Device Identity
 - **Model**: Realme C53 (RMX3760)
