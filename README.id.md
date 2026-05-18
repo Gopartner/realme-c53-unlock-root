@@ -20,6 +20,8 @@ Setiap GitHub Release yang Anda buat di fork sendiri adalah build PRIBADI Anda �
 
 Tidak punya Python? Download **Release ZIP** — sudah termasuk flash scripts, tanpa setup.
 
+> 🤖 **Butuh bantuan AI?** Lihat [`AI_PROMPT_TEMPLATE.md`](AI_PROMPT_TEMPLATE.md) untuk template prompt siap pakai.
+
 ---
 
 ## Cara Kerja

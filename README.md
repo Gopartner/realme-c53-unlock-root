@@ -20,6 +20,8 @@ Every GitHub release you create on your own fork is YOUR personal build — save
 
 Don't have Python? Download the **Release ZIP** instead — it includes flash scripts and requires zero setup.
 
+> 🤖 **Want AI assistance?** See [`AI_PROMPT_TEMPLATE.md`](AI_PROMPT_TEMPLATE.md) for ready-to-use prompts.
+
 ---
 
 ## How It Works
