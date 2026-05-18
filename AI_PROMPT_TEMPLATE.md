@@ -104,20 +104,29 @@ Lihat AGENTS.md bagian Troubleshooting.
 
 ---
 
-## 8. Cek status device
+## 8. Cek status device + environment PC
 
-Gunakan untuk ngecek kondisi HP sebelum operasi — butuh USB debugging aktif.
+Gunakan untuk ngecek kondisi HP sebelum operasi (butuh USB debugging aktif)
+dan memastikan PC/laptop siap.
 
 ```
 HP saya Realme C53 (RMX3760), USB debugging aktif, terhubung ke PC.
 
-Saya mau cek status device lengkap:
-1. Bootloader — locked atau unlocked?
-2. Status AVB / vbmeta — apakah verified boot aktif?
-3. Mode SELinux — enforcing atau permissive?
-4. Partisi — ada berapa slot (A/B)? Ukuran boot, super, vbmeta?
-5. Kernel — versi dan vermagic nya?
-6. Root — sudah ada akses root atau belum?
+Saya mau cek semuanya:
+
+— CEK PC / LAPTOP —
+1. Python — sudah terinstall? Versi minimal 3.10?
+2. ADB & Fastboot — sudah ada di PATH?
+3. Git — sudah terinstall?
+4. Folder output/backup/ — ada ruang kosong?
+
+— CEK HP —
+5. Bootloader — locked atau unlocked?
+6. Status AVB / vbmeta — apakah verified boot aktif?
+7. Mode SELinux — enforcing atau permissive?
+8. Partisi — ada berapa slot (A/B)? Ukuran boot, super, vbmeta?
+9. Kernel — versi dan vermagic nya?
+10. Root — sudah ada akses root atau belum?
 
 Tampilkan semua informasinya. Jelaskan apa artinya masing-masing.
 ```
