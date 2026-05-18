@@ -20,7 +20,9 @@ Setiap GitHub Release yang Anda buat di fork sendiri adalah build PRIBADI Anda �
 
 Tidak punya Python? Download **Release ZIP** — sudah termasuk flash scripts, tanpa setup.
 
-> 🤖 **Butuh bantuan AI?** Lihat [`AI_PROMPT_TEMPLATE.md`](AI_PROMPT_TEMPLATE.md) untuk template prompt siap pakai.
+> 🤖 **Pakai AI assistant?** Lihat [`AI_PROMPT_TEMPLATE.md`](AI_PROMPT_TEMPLATE.md) untuk template prompt siap pakai.
+> Rekomendasi: [opencode](https://opencode.ai) — AI agent CLI yang bisa baca/edit file dan
+> execute command langsung di terminal. Jalanin dari folder repo ini.
 
 ---
 
