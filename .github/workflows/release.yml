@@ -54,3 +54,22 @@ jobs:
           scripts/config --set-str LOCALVERSION "-android13-8$LOCALVER"
           scripts/config --module KSU
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+      - name: Build kernel
+        run: |
+          cd kernel_source
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
+        timeout-minutes: 30
+      - name: Build modules
+        run: |
+          cd kernel_source
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
+            KCFLAGS="-Wno-unused-value" \
+            KBUILD_MODPOST_WARN=1 \
+            M=drivers/kernelsu modules
+      - name: Extract vermagic
+        id: extract
+        run: |
+          KSU_KO=$(find kernel_source -name "kernelsu.ko" -type f | head -1)
+          echo "vermagic=$(modinfo -F vermagic "$KSU_KO")" >> "$GITHUB_OUTPUT"
+          mkdir -p staging/kernelsu
+          cp "$KSU_KO" staging/kernelsu/
