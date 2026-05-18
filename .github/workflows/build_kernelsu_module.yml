@@ -1,5 +1,4 @@
 name: Build & Create Complete Release
-
 on:
   workflow_dispatch:
     inputs:
@@ -85,7 +84,7 @@ jobs:
       id: extract
       run: |
         KSU_KO=$(find kernel_source -name "kernelsu.ko" -type f | head -1)
-        echo "vermefic=$(modinfo -F vermagic "$KSU_KO")" >> "$GITHUB_OUTPUT"
+        echo "vermagic=$(modinfo -F vermagic "$KSU_KO")" >> "$GITHUB_OUTPUT"
         mkdir -p staging/kernelsu
         cp "$KSU_KO" staging/kernelsu/
 
@@ -122,7 +121,7 @@ jobs:
 REM ============================================
 REM Realme C53 KernelSU Flash Tool
 REM ============================================
-echo Realme C53 (RMX3760) — Flash KernelSU Boot
+echo Realme C53 (RMX3760) - Flash KernelSU Boot
 echo.
 adb get-state >nul 2>&1
 if %ERRORLEVEL% neq 0 (
@@ -154,9 +153,9 @@ BAT
 
         cat > staging/complete/flash.sh << 'SH'
 #!/bin/bash
-# Realme C53 (RMX3760) — Flash KernelSU Boot
+# Realme C53 (RMX3760) - Flash KernelSU Boot
 set -e
-echo "Realme C53 (RMX3760) — Flash KernelSU Boot"
+echo "Realme C53 (RMX3760) - Flash KernelSU Boot"
 adb get-state >/dev/null 2>&1 || { echo "Device not detected"; exit 1; }
 echo "[1/4] Rebooting to fastboot..."
 adb reboot bootloader
@@ -173,9 +172,9 @@ SH
 
         # 6. README
         cat > staging/complete/README.txt << 'EOF'
-╔══════════════════════════════════════════╗
-║  Realme C53 (RMX3760) KernelSU Release  ║
-╚══════════════════════════════════════════╝
+========================================
+  Realme C53 (RMX3760) KernelSU Release
+========================================
 
 Kernel: 5.15.178-android13-8
 EOF
@@ -184,11 +183,11 @@ EOF
 
 === CONTENTS ===
 
-kernelsu_patched_boot.img   — Ready-to-flash boot image
-kernelsu.ko                  — KernelSU LKM module
-unlock/                      — Bootloader unlock tool (CVE-2022-38694)
-apk/KernelSU_Next.apk        — KernelSU Next app
-flash.bat / flash.sh         — One-click flash scripts
+kernelsu_patched_boot.img   - Ready-to-flash boot image
+kernelsu.ko                  - KernelSU LKM module
+unlock/                      - Bootloader unlock tool (CVE-2022-38694)
+apk/KernelSU_Next.apk        - KernelSU Next app
+flash.bat / flash.sh         - One-click flash scripts
 
 === UNLOCK BOOTLOADER (first time only) ===
 
@@ -222,7 +221,7 @@ Or manually:
 
 After reboot:
   adb install apk/KernelSU_Next.apk
-  Open app → Superuser → Grant Shell
+  Open app -> Superuser -> Grant Shell
 
 === VERIFY ===
 
@@ -256,12 +255,12 @@ EOF
         TAG_NAME="release-$(date +'%Y%m%d-%H%M%S')"
 
         # Build release notes
-        NOTES="## Realme C53 (RMX3760) — Complete Release Package
+        NOTES="## Realme C53 (RMX3760) - Complete Release Package
 
         **Kernel:** 5.15.178-android13-8
         **Vermagic:** $VERMAGIC
 
-        ### 📦 Included
+        ### [Package] Included
 
         | Item | Description |
         |------|-------------|
@@ -275,25 +274,25 @@ EOF
         if [ -z "${{ inputs.stock_boot_url }}" ]; then
           NOTES="$NOTES
 
-        ### ⚠️ No patched boot image
+        ### [Warning] No patched boot image
 
         This release only contains the kernel module. To get a ready-to-flash image:
         1. Clone the repo: \`git clone https://github.com/${{ github.repository }}.git\`
         2. Place \`kernelsu.ko\` in \`downloads/\`
-        3. Backup stock boot: \`python cli.py\` → menu 3
+        3. Backup stock boot: \`python cli.py\` -> menu 3
         4. Build: \`python release/build_release.py --kernelsu downloads/kernelsu.ko --stock ...\`
-        5. Flash: \`python cli.py\` → menu 6"
+        5. Flash: \`python cli.py\` -> menu 6"
         fi
 
         NOTES="$NOTES
 
-        ### 🚀 Quick Flash (if boot image included)
+        ### [Quick] Flash (if boot image included)
 
         1. Extract the zip
         2. Connect phone with USB debugging enabled
         3. Run \`flash.bat\` (Windows) or \`./flash.sh\` (Linux)
 
-        ### 🔄 Reuse
+        ### [Reuse]
 
         Same \`kernelsu.ko\` works as long as kernel version doesn't change.
         Just backup fresh stock boot and rebuild the patched image."
