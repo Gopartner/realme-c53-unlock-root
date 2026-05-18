@@ -35,6 +35,10 @@ BACKUP_DIR = REPO_ROOT / "output" / "backup"
 
 MSYS2_ENV = {**os.environ.copy(), "MSYS2_ARG_CONV_EXCL": "*"}
 
+# Global prefix for output filenames — set in main()
+FILE_PREFIX = ""
+TYPE_TAG = ""
+
 
 def log(message: str):
     print(f"[BUILD] {message}")
@@ -77,7 +81,7 @@ def find_stock_boot() -> Optional[Path]:
 def build_magisk(stock_path: str, magisk_apk: str):
     log("=== Building Magisk-patched boot image ===")
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
-    output = os.path.join(RUNTIME_DIR, "magisk_patched_boot.img")
+    output = os.path.join(RUNTIME_DIR, f"{FILE_PREFIX}_magisk_patched_boot{TYPE_TAG}.img")
     tmp = "/data/local/tmp/build_magisk"
     adb(f"shell rm -rf {tmp}")
     adb(f"shell mkdir -p {tmp}/magisk")
@@ -129,7 +133,7 @@ def build_magisk(stock_path: str, magisk_apk: str):
 def build_kernelsu(stock_path: str, kernelsu_ko_path: str):
     log("=== Building KernelSU-patched boot image ===")
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
-    output = os.path.join(RUNTIME_DIR, "kernelsu_patched_boot.img")
+    output = os.path.join(RUNTIME_DIR, f"{FILE_PREFIX}_kernelsu_patched_boot{TYPE_TAG}.img")
     tmp = "/data/local/tmp/build_ksu"
     adb(f"shell rm -rf {tmp}")
     adb(f"shell mkdir -p {tmp}")
@@ -152,24 +156,28 @@ def build_kernelsu(stock_path: str, kernelsu_ko_path: str):
         f"-b {tmp}/boot.img "
         f"-m {tmp}/kernelsu.ko "
         f"-o {tmp}/ "
-        f"--out-name kernelsu_patched_boot.img")
-    adb(f'pull {tmp}/kernelsu_patched_boot.img "{output}"')
+        f"--out-name {FILE_PREFIX}_kernelsu_patched_boot{TYPE_TAG}.img")
+    adb(f'pull {tmp}/{FILE_PREFIX}_kernelsu_patched_boot{TYPE_TAG}.img "{output}"')
     adb(f"shell rm -rf {tmp}")
     log(f"[OK] KernelSU image: {output}")
     return output
 
 
-def write_metadata(artifacts: dict):
+def write_metadata(artifacts: dict, release_type: str = "release"):
     meta_path = RUNTIME_DIR / "metadata.txt"
     lines = [
         f"# {DEVICE.name} ({DEVICE.model}) Release Metadata",
         f"# Generated: {datetime.now().isoformat()}",
         f"# Tool Version: 2.0.0",
+        f"RELEASE_TYPE={release_type}",
         f"DEVICE={DEVICE.model}",
         f"NAME={DEVICE.name}",
-        f"SOC={DEVICE.soc} ({DEVICE.chipset})",
+        f"CHIPSET_FAMILY={DEVICE.chipset_family}",
+        f"SOC={DEVICE.soc}",
+        f"CHIPSET={DEVICE.chipset}",
         f"KERNEL={DEVICE.kernel}",
         f"ANDROID={DEVICE.android}",
+        f"BUILD_METHOD={DEVICE.build_method}",
         "",
     ]
     for name, path in artifacts.items():
@@ -183,19 +191,34 @@ def write_metadata(artifacts: dict):
     log(f"[OK] Metadata: {meta_path}")
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description=f"Build release artifacts for {DEVICE.model}")
     parser.add_argument("--magisk", help="Path to Magisk APK")
     parser.add_argument("--kernelsu", help="Path to kernelsu.ko")
     parser.add_argument("--stock", help="Path to stock boot image")
     parser.add_argument("--all", action="store_true", help="Build everything available")
     parser.add_argument("--device", help=f"Device profile (default: {DEVICE.model})")
+    parser.add_argument("--test", action="store_true", help="Mark as untested/test release")
+    parser.add_argument("--release-type", choices=["release", "test", "debug"], help="Release type (default: release)")
     args = parser.parse_args()
 
     if args.device:
         set_device(args.device)
 
-    log(f"Device: {DEVICE.name} ({DEVICE.model}) — {DEVICE.kernel}")
+    release_type = args.release_type or ("test" if args.test else "release")
+    tag = "[TEST]" if release_type == "test" else "[RELEASE]"
+
+    # Set globals for file naming
+    global FILE_PREFIX, TYPE_TAG
+    safe_model = DEVICE.model.lower().replace(" ", "_")
+    safe_soc = DEVICE.soc.replace(" ", "_").replace("(", "").replace(")", "").replace("__", "_")
+    FILE_PREFIX = f"{safe_model}_{safe_soc}"
+    TYPE_TAG = "_Test" if release_type == "test" else ""
+
+    log(f"{tag} {DEVICE.name} ({DEVICE.model}) — {DEVICE.soc} — {DEVICE.kernel}")
+    log(f"  Chipset family: {DEVICE.chipset_family}")
+    log(f"  Release type: {release_type}")
+    log(f"  File prefix: {FILE_PREFIX}")
 
     if args.all:
         stock = args.stock or find_stock_boot()
@@ -205,16 +228,18 @@ if __name__ == "__main__":
         images = {}
         magisk_apk = str(REPO_ROOT / "tools" / "apk" / "Magisk-v30.7.apk")
         if os.path.exists(magisk_apk):
-            images["magisk_patched_boot.img"] = build_magisk(str(stock), magisk_apk)
+            img = build_magisk(str(stock), magisk_apk)
+            images[os.path.basename(img)] = img
         else:
             log(f"[SKIP] Magisk APK not found: {magisk_apk}")
         kernelsu_ko = str(REPO_ROOT / "kernelsu.ko")
         if os.path.exists(kernelsu_ko):
-            images["kernelsu_patched_boot.img"] = build_kernelsu(str(stock), kernelsu_ko)
+            img = build_kernelsu(str(stock), kernelsu_ko)
+            images[os.path.basename(img)] = img
         else:
             log(f"[SKIP] kernelsu.ko not found: {kernelsu_ko}")
         if images:
-            write_metadata(images)
+            write_metadata(images, release_type)
         else:
             log("[ERROR] Nothing to build")
             sys.exit(1)
@@ -225,10 +250,16 @@ if __name__ == "__main__":
             sys.exit(1)
         images = {}
         if args.magisk:
-            images["magisk_patched_boot.img"] = build_magisk(str(stock), os.path.abspath(args.magisk))
+            img = build_magisk(str(stock), os.path.abspath(args.magisk))
+            images[os.path.basename(img)] = img
         if args.kernelsu:
-            images["kernelsu_patched_boot.img"] = build_kernelsu(str(stock), os.path.abspath(args.kernelsu))
+            img = build_kernelsu(str(stock), os.path.abspath(args.kernelsu))
+            images[os.path.basename(img)] = img
         if not images:
             parser.print_help()
             sys.exit(1)
-        write_metadata(images)
+        write_metadata(images, release_type)
+
+
+if __name__ == "__main__":
+    main()
