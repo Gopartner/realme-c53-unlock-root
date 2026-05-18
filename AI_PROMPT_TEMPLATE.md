@@ -104,6 +104,26 @@ Lihat AGENTS.md bagian Troubleshooting.
 
 ---
 
+## 8. Cek status device
+
+Gunakan untuk ngecek kondisi HP sebelum operasi — butuh USB debugging aktif.
+
+```
+HP saya Realme C53 (RMX3760), USB debugging aktif, terhubung ke PC.
+
+Saya mau cek status device lengkap:
+1. Bootloader — locked atau unlocked?
+2. Status AVB / vbmeta — apakah verified boot aktif?
+3. Mode SELinux — enforcing atau permissive?
+4. Partisi — ada berapa slot (A/B)? Ukuran boot, super, vbmeta?
+5. Kernel — versi dan vermagic nya?
+6. Root — sudah ada akses root atau belum?
+
+Tampilkan semua informasinya. Jelaskan apa artinya masing-masing.
+```
+
+---
+
 ## Tips
 
 - Jalankan AI agent dari folder repo ini (`cd realme-c53-unlock-root`)
