@@ -1,0 +1,10 @@
+name: Build RMX3760 Release
+run-name: Build KernelSU Release for RMX3760
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - run: echo "trigger OK"
