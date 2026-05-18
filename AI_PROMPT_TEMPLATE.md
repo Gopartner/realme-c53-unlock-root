@@ -1,159 +1,96 @@
-# 🤖 AI Prompt Templates — Realme C53 Unlock & Root
+# 📋 AI Prompt Templates — Realme C53 Unlock & Root
 
-Copy-paste template di bawah ke AI agent favorit Anda untuk mendapatkan bantuan
-yang akurat sesuai project ini.
+Bingung mau nulis apa ke AI agent? Copy-paste aja template di bawah.
 
-> **Rekomendasi**: [opencode](https://opencode.ai) — AI agent CLI khusus coding.
-> Bisa baca, edit, dan execute command langsung di terminal.
-
-Prasyarat: **Anda sudah clone repo ini** dan menjalankan AI agent dari **dalam folder repo**.
-Semua workflow lengkap ada di `AGENTS.md`.
+> **Prasyarat**: kamu sudah clone repo ini dan buka AI agent (opencode, Cline, Claude, dll)
+> dari **dalam folder repo**. Biar AI bisa baca file-file nya.
 
 ---
 
-## 📋 Template 1: Root Lengkap (Dari Awal Sampai Selesai)
-
-**Copy ini ke AI agent:**
+## 1. Root lengkap — dari awal sampai flashing
 
 ```
-Saya sudah clone repo ini dan ingin root Realme C53 (RMX3760) dari awal sampai selesai.
+Saya mau root Realme C53 (RMX3760) dari awal sampai selesai.
 
-Lingkungan:
-- Windows 10/11
-- Python sudah terinstall
-- USB cable siap
-- Saya sudah punya akun GitHub
+Windows 10, Python sudah terinstall, USB siap, punya akun GitHub.
 
-Saya sudah di dalam folder repo ini. Jalanin step by step.
-
-Yang perlu dilakukan:
-1. Cek environment saya (Python, ADB, fastboot, git)
-2. Pandu saya fork repo ini ke GitHub saya (saya buka browser)
-3. Trigger GitHub Actions build kernel module (saya buka browser)
-4. Sambil nunggu build selesai, install SPRD driver
-5. Unlock bootloader via CVE-2022-38694
-6. Setelah unlock, set up HP + enable USB debugging
-7. Backup stock boot image
-8. Download kernelsu.ko dari Release GitHub
-9. Build patched boot image
-10. Flash KernelSU (test-boot dulu)
-11. Verify root
-
-Baca AGENTS.md dan pandu saya langkah demi langkah.
-Jangan lanjut ke step berikutnya sebelum saya konfirmasi.
+Baca AGENTS.md dan pandu saya step by step. Tunggu konfirmasi saya
+sebelum lanjut ke step berikutnya.
 ```
 
 ---
 
-## 📋 Template 2: Hanya Unlock Bootloader
-
-**Copy ini ke AI agent:**
+## 2. Root ulang — pakai release lama
 
 ```
-Saya sudah punya akses ke repo ini dan hanya perlu unlock bootloader
-Realme C53 (RMX3760) via CVE-2022-38694.
+Saya pernah root Realme C53 (RMX3760) sebelumnya.
+Saya masih punya kernelsu.ko dari Release GitHub yang lama.
+HP sudah USB debugging.
 
-Device sudah di SPRD U2S Diag mode (COM3).
-Driver SPRD sudah terinstall.
-
-Tolong pandu saya step by step unlock bootloader sesuai AGENTS.md Workflow D.
-Jangan lupa kasih tau kapan harus lakukan screwdriver trick.
+Saya perlu root ulang. Pandu saya tanpa build ulang kernel module.
 ```
 
 ---
 
-## 📋 Template 3: Build Kernel Module (GitHub Actions)
-
-**Copy ini ke AI agent:**
+## 3. Unlock bootloader doang
 
 ```
-Saya ingin build kernel module (kernelsu.ko) untuk Realme C53 (RMX3760)
-via GitHub Actions. Kernel: 5.15.178-android13-8.
+Saya cuma perlu unlock bootloader Realme C53 (RMX3760).
+HP sudah masuk SPRD U2S Diag mode (COM3) dan driver sudah terinstall.
 
-Saya sudah punya akun GitHub dan sudah clone repo ini.
-
-Tolong:
-1. Buka browser dan pandu saya fork repo ini
-2. Trigger GitHub Actions workflow "Build & Create Complete Release"
-3. Download hasil Release setelah selesai
-
-Baca AGENTS.md Workflow A untuk detailnya.
+Pandu saya step by step unlock via CVE-2022-38694.
+Jangan lupa kasih tau kapan screwdriver trick.
 ```
 
 ---
 
-## 📋 Template 4: Build Release + Release ke Publik
-
-**Copy ini ke AI agent setelah berhasil root:**
+## 4. Build kernel module (GitHub Actions)
 
 ```
-Saya sudah berhasil unlock dan root Realme C53 (RMX3760).
-Sekarang saya ingin membuat GitHub Release yang bisa dipakai orang lain.
+Saya ingin build kernelsu.ko untuk Realme C53 (RMX3760).
+Kernel: 5.15.178-android13-8. Saya punya akun GitHub.
 
-Yang sudah saya punya:
-- kernelsu.ko (sudah build via GitHub Actions)
-- Stock boot image (sudah backup)
-- Patched boot image (sudah build)
-
-Tolong bantu saya:
-1. Verifikasi semua artifact (SHA256)
-2. Buat GitHub Release di fork saya
-3. Kasih tau cara orang lain pakai Release ini
-
-Baca AGENTS.md Workflow J untuk detailnya.
+Pandu saya: fork repo → trigger GitHub Actions → download hasil Release.
 ```
 
 ---
 
-## 📋 Template 5: Troubleshooting / Error
-
-**Copy ini ke AI agent:**
+## 5. Build + publish release untuk orang lain
 
 ```
-Saya mengalami masalah saat [sebutkan masalahnya, misal: unlock bootloader gagal /
-flash boot error / vermagic mismatch / device not detected].
+Saya sudah berhasil root Realme C53 (RMX3760). Semua file sudah siap:
+- kernelsu.ko (dari GitHub Actions)
+- Stock boot image (backup)
+- Patched boot image (sudah di build)
 
-Saya pakai Realme C53 (RMX3760) dan sudah clone repo ini.
-
-Error message:
-[paste error message di sini]
-
-Tolong bantu diagnose dan kasih solusi. Lihat AGENTS.md bagian Troubleshooting.
+Sekarang saya mau publish sebagai GitHub Release biar bisa dipakai
+orang lain. Pandu saya.
 ```
 
 ---
 
-## 📋 Template 6: Root Ulang (Pakai Release Lama)
-
-**Copy ini ke AI agent:**
+## 6. Error / trouble
 
 ```
-Saya sudah pernah root Realme C53 (RMX3760) sebelumnya dan punya
-Release ZIP dari GitHub fork saya.
+Saya gagal di step [sebutkan]. Ini error nya:
 
-Saya perlu root ulang karena [OTA update / factory reset / ganti ROM].
+[paste error message]
 
-Yang saya punya:
-- kernelsu.ko dari Release sebelumnya
-- HP sudah USB debugging
-
-Tolong bantu root ulang tanpa build kernel module lagi.
-Lihat AGENTS.md bagian "Reusing Your Release".
+Saya pakai Realme C53 (RMX3760). Tolong diagnose.
+Lihat AGENTS.md bagian Troubleshooting.
 ```
 
 ---
 
-## Tips Penggunaan
+## Tips
 
-1. **Jalankan AI agent dari folder repo ini** — biar AI bisa baca struktur file dan execute command
-2. **Sebutkan model HP dengan benar** — `Realme C53 (RMX3760)`
-3. **Copy error message lengkap** — kalau ada error, paste mentahan ke AI
-4. **Konfirmasi setiap langkah** — AI akan minta izin sebelum execute command
-5. **Hasil release bisa dishare** — setelah sukses, Release ZIP bisa diupload
-   ke GitHub Releases untuk dipakai user Realme C53 lain
+- Jalankan AI agent dari folder repo ini (`cd realme-c53-unlock-root`)
+- Kasih prompt yang jelas — mau root total, atau cuma unlock, atau cuma build
+- Kalau error — paste mentahan error message nya
+- Setiap langkah, kamu harus konfirmasi dulu sebelum AI lanjut
 
 ---
 
-## Lisensi Template
+## Lisensi
 
-Bebas pakai. Feel free to modify sesuai kebutuhan.
+Bebas pakai.
