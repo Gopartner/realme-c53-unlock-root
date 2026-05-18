@@ -69,7 +69,29 @@ orang lain. Pandu saya.
 
 ---
 
-## 6. Error / trouble
+## 6. Backup full — dari BROM mode (sebelum operasi)
+
+Gunakan kalau HP sudah masuk **BROM / download mode** via kabel USB.
+Backup ini penting sebagai jaring pengaman kalau operasi gagal, dan
+sebagai bahan referensi riset kernel / unlock.
+
+```
+HP saya Realme C53 (RMX3760) sudah masuk BROM / download mode
+dan terdeteksi di laptop (port USB).
+
+Saya mau backup semua partisi system penting sebelum melakukan
+operasi unlock atau flashing apapun. Saya butuh file-file ini untuk:
+1. Pemulihan jika operasi gagal
+2. Referensi riset unlock / build kernel
+
+Pandu saya: dump partisi boot, super, vendor, dtbo, vbmeta, persist,
+dan partisi penting lainnya. Simpan di folder output/backup/.
+Jelaskan fungsi setiap partisi yang di backup.
+```
+
+---
+
+## 7. Error / trouble
 
 ```
 Saya gagal di step [sebutkan]. Ini error nya:
