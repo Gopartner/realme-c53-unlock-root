@@ -1,192 +1,139 @@
-# Realme C53 (RMX3760) — Bootloader Unlock & Root Guide
+# Realme C53 (RMX3760) — Bootloader Unlock & Root Toolkit
 
-Complete guide to unlock bootloader (via CVE-2022-38694) and gain root access
-on Realme C53 / RMX3760 (Unisoc T612).
+[**English**](#) | [Bahasa Indonesia](README.id.md)
 
-> **Bahasa Indonesia?** Lihat [`README.id.md`](README.id.md) untuk panduan dalam bahasa Indonesia.
+Toolkit to unlock bootloader (CVE-2022-38694) and root Realme C53 / RMX3760 (Unisoc T612).
 
-## Device Specifications
+---
 
-| Spec | Value |
-|------|-------|
+## 📋 Device Specs
+
+| Item | Detail |
+|------|--------|
 | Model | Realme C53 (RMX3760) |
-| SoC | Unisoc T612 (ums9230_hulk) |
-| CPU | 2x Cortex-A75 + 6x Cortex-A55 |
-| RAM | 8 GB |
-| Storage | 256 GB |
-| Display | 720x1600 HD+, 320 dpi |
-| Kernel | 5.15.178-android13-8 |
-| Android | 15 (SDK 35) |
-| Arch | arm64-v8a |
-| Manufacturer | realme |
-| Build | AP3A.240905.015.A2 |
-| Slots | A/B (boot_a/boot_b, init_boot_a/init_boot_b) |
+| SoC | Unisoc T612 (ums9230) |
+| Kernel | `5.15.178-android13-8` |
+| Android | 15 (AP3A.240905.015.A2) |
+| Slots | A/B (`boot_a`/`boot_b`) |
 
-## Requirements
+---
 
-- Windows PC (or any OS with ADB/fastboot)
-- USB cable (data transfer capable)
-- SPRD USB driver — included in `tools/driver/`
-- ~30 minutes
+## 🏗️ For Developers
 
-## Repository Contents
+Build flashable release images from stock boot:
+
+```bash
+# 1. Backup stock boot (requires USB debugging)
+python cli.py        # select menu 3
+
+# 2. Build release image
+python release/build_release.py --kernelsu kernelsu.ko --stock output/backup/stock_boot_*.img
+python release/build_release.py --magisk tools/apk/Magisk-v30.7.apk --stock output/backup/stock_boot_*.img
+python release/build_release.py --all   # build all
+
+# 3. Verify artifacts
+python release/build/verify_release.py
+```
+
+**Output:** `release/runtime/` + `metadata.txt` (SHA256 checksums).
+
+### KernelSU LKM Build
+
+Build `kernelsu.ko` via GitHub Actions:
+```
+https://github.com/Gopartner/realme-c53-unlock-root/actions
+```
+See `AGENTS.md` for vermagic details.
+
+---
+
+## 🛠️ For End-Users
+
+### Prerequisites
+
+- Windows (or any OS with ADB/fastboot)
+- USB data cable
+- SPRD driver — `tools/driver/`
+
+### Run the CLI
+
+```bash
+python cli.py
+```
+
+| Menu | Function |
+|------|----------|
+| 1 | Check environment (adb/fastboot) |
+| 2 | Validate device (RMX3760) |
+| 3 | Backup stock boot image |
+| 4 | Install SPRD driver (open folder) |
+| 5 | **Unlock bootloader** (CVE-2022-38694) |
+| 6 | **Flash KernelSU** (test-boot first) |
+| 7 | **Flash Magisk** |
+| 8 | Verify root (`su -c id`) |
+| 9 | Show release metadata |
+
+### Full workflow
+
+```
+1. Install driver        → menu 4
+2. Unlock bootloader     → menu 5 + screwdriver trick
+3. Backup stock boot     → menu 3
+4. Build release (dev)   → python release/build_release.py --all
+5. Flash root            → menu 6 (KSU) or 7 (Magisk)
+6. Verify root           → menu 8
+```
+
+---
+
+## 📁 Repository Structure
 
 ```
 realme-c53-unlock-root/
-├── README.md                    # English guide
-├── README.id.md                 # Bahasa Indonesia guide
-├── AGENTS.md                    # AI agent reference
-├── scripts/
-│   ├── backup.sh                # Backup data before unlock
-│   ├── unlock.sh                # Unlock bootloader procedure
-│   ├── root_magisk.sh           # Root with Magisk
-│   └── root_kernelsu.sh         # Root with KernelSU LKM
+├── cli.py                       ← Entry point (end-user)
+├── src/rmx_unlock/              ← All logic (12 modules)
+│   ├── config.py                ← Paths & constants
+│   ├── adb.py                   ← ADB/Fastboot wrapper
+│   ├── flash.py                 ← Flashing with safety
+│   ├── unlock.py                ← CVE-2022-38694 unlock
+│   ├── backup.py                ← Boot image backup
+│   ├── validation.py            ← Env/device/checksum
+│   ├── metadata.py              ← Release metadata parser
+│   ├── logger.py                ← Session logging
+│   ├── driver.py                ← Driver installer
+│   └── cli.py                   ← Menu orchestrator
+├── release/
+│   ├── build_release.py         ← Build stage (developer)
+│   └── build/verify_release.py  ← Artifact verification
 ├── tools/
-│   ├── unlock/                  # CVE-2022-38694 unlock tool (spd_dump, etc.)
-│   ├── driver/                  # SPRD USB driver for Windows
-│   └── apk/                     # Magisk & KernelSU Next APKs
-└── files/
-    └── partition_layout.txt     # Partition table
+│   ├── unlock/                  ← CVE-2022-38694 tool
+│   ├── driver/                  ← SPRD driver
+│   └── apk/                     ← APK files
+└── output/backup/               ← Stock boot backups
 ```
 
-All tools and files are included — no need to download anything else.
+### Key Design
 
-## Methods
+- **No live patching** — all patching happens in build stage, safe for end-users
+- **Test-boot safety** — KernelSU tested via `fastboot boot` before flashing
+- **Checksum** — SHA256 verified before every flash
+- **Python stdlib only** — zero dependencies
 
-This guide covers **two** root methods:
+---
 
-1. **Magisk** (recommended, simpler) — Works via init ramdisk patching
-2. **KernelSU** (LKM mode) — Requires building kernel module from source
+## ⚠️ Warning
 
-## Quick Start
+Unlocking bootloader **wipes all device data**. Backup before proceeding.
 
-### 1. Backup Data
-
-**WARNING:** Unlocking bootloader wipes the device. Backup your important data before proceeding.
-
-```
-./scripts/backup.sh
-```
-
-This saves your media files (DCIM, Pictures, Download, etc.) and dumps the stock boot image.
-
-### 2. Install SPRD Driver
-
-Install the driver from `tools/driver/SPD_Driver_R4.20.4201.zip` before proceeding with unlock.
-
-### 3. Enter SPRD U2S Diag Mode
-
-1. Power off phone completely
-2. Connect USB cable to PC
-3. Hold **both volume keys**, then tap **power button** for ~1 second and release power
-4. Keep holding volume keys — device will appear as **SPRD U2S Diag (COM3)**
-
-### 4. Unlock Bootloader
-
-All tools are in `tools/unlock/`. Run the unlock script:
-
-```
-./scripts/unlock.sh
-```
-
-The script will:
-1. Dump bootchain partitions (PGPT, SPL, uboot)
-2. Generate patched SPL via `gen_spl-unlock.exe`
-3. Erase SPL and write cboot
-4. **Wait for you to do the screwdriver trick** (hold both vol keys + tap power)
-5. Execute unlock payload (`spl-unlock.bin`)
-6. Restore original SPL and uboot (no button pressing needed)
-7. Wipe misc partition (bootloader now unlocked)
-
-Verify: `miscdata.bin` should contain non-zero data.
-
-### 5. Dump Stock Boot Image
-
-After phone reboots (factory reset), set up Android and enable USB debugging:
-
-```
-./scripts/backup.sh
-```
-
-Or manually:
-```
-adb shell dd if=/dev/block/by-name/boot_a of=/data/local/tmp/boot.img
-adb pull /data/local/tmp/boot.img stock_boot.img
-```
-
-### 6. Root with Magisk (recommended)
-
-```
-./scripts/root_magisk.sh
-```
-
-The script will:
-1. Install Magisk app on phone
-2. Extract Magisk binaries from the APK
-3. Push stock boot image + Magisk files to phone
-4. Patch boot image with Magisk (creates new ramdisk with magiskinit)
-5. Flash patched boot to both `boot_a` and `boot_b`
-6. Reboot
-
-After reboot, open **Magisk** app → **Superuser** → Grant root to **Shell**.
-
-```
-adb shell su -c id
-# -> uid=0(root)
-```
-
-### 7. Root with KernelSU (LKM)
-
-1. Build `kernelsu.ko` via GitHub Actions:
-   ```
-   https://github.com/Gopartner/realme-c53-unlock-root/actions
-   # Run "Build KernelSU LKM" workflow -> download artifact
-   ```
-2. Place `kernelsu.ko` in repo root
-3. Run:
-   ```
-   ./scripts/root_kernelsu.sh
-   ```
-Or use the CLI (option 6).
-
-**Note:** KernelSU is in LKM (Loadable Kernel Module) mode. The `kernelsu.ko`
-must match the device kernel vermagic exactly. See AGENTS.md for details.
-
-## Partition Layout
-
-| Partition | Size | Description |
-|-----------|------|-------------|
-| boot_a/boot_b | 64 MB | Kernel + DTB (no ramdisk) |
-| init_boot_a/b | 8 MB | Ramdisk (init scripts) |
-| vendor_boot | 100 MB | Vendor ramdisk |
-| super | 8000 MB | System, product, vendor |
-| userdata | rest | User data |
-| miscdata | 1 MB | Bootloader unlock flag |
-
-Full layout in `files/partition_layout.txt`.
-
-## Kernel Source
-
-Realme GPL source (in `kernel_source/`):
-```
-https://github.com/realme-kernel-opensource/realme_C51_C53_Note50_C60_C51_N53-AndroidU-kernel-source
-```
-
-**⚠️ Note:** This GPL source is Linux **5.4.254**, but the device runs **5.15.178**.
-The `.config` in this repo was dumped from the device as a reference only.
-
-For KernelSU LKM builds, use ACK android14-5.15 (`kernel_ack_5.15/`) instead.
+---
 
 ## Credits
 
-- [TomKing062](https://github.com/TomKing062) — CVE-2022-38694 unlock exploit
-- [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) — KernelSU Next
-- [topjohnwu](https://github.com/topjohnwu/Magisk) — Magisk
-- Realme Open Source — Kernel source code
-- [opencode](https://opencode.ai) — AI coding agent that assisted with the unlock bootloader, root process, and documentation
-- opencode/big-pickle — Model powering the AI agent
+- [TomKing062](https://github.com/TomKing062) — CVE-2022-38694
+- [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)
+- [topjohnwu](https://github.com/topjohnwu/Magisk)
+- Realme Open Source
 
 ## License
 
-This documentation is provided for educational purposes.
-Use at your own risk.
+Educational purposes only. Use at your own risk.
