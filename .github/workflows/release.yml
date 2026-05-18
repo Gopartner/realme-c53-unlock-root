@@ -1,167 +1,25 @@
 name: Build RMX3760 Release
-run-name: Build KernelSU Release for RMX3760
 on:
   workflow_dispatch:
     inputs:
       localversion:
-        description: Extra vermagic suffix
         required: false
         default: ''
       stock_boot_url:
-        description: URL to stock boot.img
         required: false
         default: ''
-
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git curl lz4 gcc-aarch64-linux-gnu bc \
-            libelf-dev build-essential bison flex libssl-dev dwarves zip
-
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          path: repo
-
-      - name: Clone ACK kernel
-        run: |
-          git clone --depth 1 --branch android14-5.15 \
-            https://android.googlesource.com/kernel/common kernel_source
-
-      - name: Set kernel version
-        run: |
-          cd kernel_source
-          sed -i 's/^SUBLEVEL = .*/SUBLEVEL = 178/' Makefile
-          sed -i 's/^EXTRAVERSION = .*/EXTRAVERSION = -android13-8/' Makefile
-
-      - name: Add KernelSU-Next
-        run: |
-          cd kernel_source
-          git clone --depth 1 --branch dev \
-            https://github.com/KernelSU-Next/KernelSU-Next.git
-          mkdir -p drivers/kernelsu
-          cp -r KernelSU-Next/kernel/* drivers/kernelsu/
-          if [ -L "drivers/kernelsu/include/uapi" ]; then
-            rm drivers/kernelsu/include/uapi
-            cp -r KernelSU-Next/uapi drivers/kernelsu/include/uapi
-          fi
-          grep -q 'source "drivers/kernelsu/Kconfig"' drivers/Kconfig || \
-            sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' drivers/Kconfig
-
-      - name: Configure kernel
-        run: |
-          cd kernel_source
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- gki_defconfig
-          scripts/config --disable LOCALVERSION_AUTO
-          LOCALVER="${{ inputs.localversion || '' }}"
-          scripts/config --set-str LOCALVERSION "-android13-8$LOCALVER"
-          scripts/config --module KSU
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
-
-      - name: Build kernel
-        run: |
-          cd kernel_source
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc)
+      - run: echo hello > test.txt
+      - name: Test step
+        run: cat test.txt
+      - name: Test timeout
+        run: sleep 1
         timeout-minutes: 30
-
-      - name: Build modules
-        run: |
-          cd kernel_source
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
-            KCFLAGS="-Wno-unused-value" \
-            KBUILD_MODPOST_WARN=1 \
-            M=drivers/kernelsu modules
-
-      - name: Extract vermagic
-        id: extract
-        run: |
-          KSU_KO=$(find kernel_source -name "kernelsu.ko" -type f | head -1)
-          echo "vermagic=$(modinfo -F vermagic "$KSU_KO")" >> "$GITHUB_OUTPUT"
-          mkdir -p staging/kernelsu
-          cp "$KSU_KO" staging/kernelsu/
-
-      - name: Build patched boot image
-        if: inputs.stock_boot_url != ''
-        run: |
-          curl -L -o stock_boot.img "${{ inputs.stock_boot_url }}"
-          python repo/release/build_release.py \
-            --kernelsu staging/kernelsu/kernelsu.ko \
-            --stock stock_boot.img
-
-      - name: Package release
-        run: |
-          mkdir -p staging/complete
-          if [ -f "repo/release/runtime/kernelsu_patched_boot.img" ]; then
-            cp repo/release/runtime/kernelsu_patched_boot.img staging/complete/
-          fi
-          cp staging/kernelsu/kernelsu.ko staging/complete/
-          cp -r repo/tools/unlock staging/complete/unlock/
-          cp -r repo/tools/apk staging/complete/apk/
-          cp -r repo/tools/modules staging/complete/modules/
-          cp repo/release/build/flash.bat staging/complete/
-          cp repo/release/build/flash.sh staging/complete/
-          cat > staging/complete/README.txt << 'EOF'
-Realme C53 (RMX3760) Complete Root Toolkit
-
-Kernel: 5.15.178-android13-8
-
-=== CONTENTS ===
-
-kernelsu.ko                  - KernelSU LKM module
-unlock/                      - Bootloader unlock tools
-apk/KernelSU_Next.apk        - Root manager app
-apk/Magisk-v27.0.apk         - Magisk v27 (stable)
-modules/ksu_loader/          - Magisk module for hybrid root
-flash.bat / flash.sh         - Flash scripts
-README.txt                   - This file
-
-=== ROOT METHODS ===
-
-A) Hybrid Magisk+KSU (recommended for RMX3760)
-   1. Patch stock boot with Magisk v27 APK on-device
-   2. Flash patched boot to both slots
-   3. Install ksu_loader module via Magisk app
-   4. Install KernelSU Next APK
-
-B) KernelSU LKM only
-   1. Patch stock boot with kernelsu.ko via build_release.py
-   2. fastboot boot kernelsu_patched_boot.img (test)
-   3. fastboot flash both slots
-   4. Install KernelSU Next APK
-
-=== BOOTLOADER UNLOCK ===
-
-See instructions in unlock/ folder.
-
-=== VERIFY ===
-
-adb shell su -c id
-EOF
-          cd staging/complete
-          zip -r "../../RMX3760_KernelSU_Release.zip" ./*
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: RMX3760_KernelSU_Release
-          path: RMX3760_KernelSU_Release.zip
-
-      - name: Create GitHub Release
-        if: github.event_name == 'workflow_dispatch'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERMAGIC="${{ steps.extract.outputs.vermagic }}"
-          TAG_NAME="release-$(date +'%Y%m%d-%H%M%S')"
-          gh release create "$TAG_NAME" \
-            --repo "${{ github.repository }}" \
-            --title "RMX3760 Release $TAG_NAME" \
-            --notes "**Vermagic:** $VERMAGIC" \
-            RMX3760_KernelSU_Release.zip
+      - name: Test if
+        if: inputs.localversion != ''
+        run: echo "has localversion"
