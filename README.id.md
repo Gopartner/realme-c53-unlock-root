@@ -1,88 +1,109 @@
 # Realme C53 (RMX3760) — Unlock Bootloader & Root Toolkit
 
-[![English](README.md)](#) | **Bahasa Indonesia**
+[English](README.md) | **Bahasa Indonesia**
 
-Toolkit untuk unlock bootloader (CVE-2022-38694) dan root Realme C53 / RMX3760 (Unisoc T612).
+**Bangun kernel module sendiri via GitHub Actions, unlock bootloader, dan root Realme C53 atau tipe Realme lainnya.**
 
----
-
-## 📋 Spesifikasi
-
-| Item | Detail |
-|------|--------|
-| Model | Realme C53 (RMX3760) |
-| SoC | Unisoc T612 (ums9230) |
-| Kernel | `5.15.178-android13-8` |
-| Android | 15 (AP3A.240905.015.A2) |
-| Slot | A/B (`boot_a`/`boot_b`) |
+Setiap GitHub Release yang Anda buat di fork sendiri adalah build PRIBADI Anda — simpan dan pakai lagi kapanpun perlu root ulang di device yang sama.
 
 ---
 
-## 🏗️ Untuk Developer
+## Cara Kerja
 
-Membangun release image yang siap di-flash dari stock boot:
+```
+Fork repo ini
+  → Jalankan GitHub Actions (membangun kernelsu.ko UNTUK device Anda)
+  → GitHub membuat Release dengan file .ko
+  → Download artifact Release
+  → Flash ke HP
+  → Selesai. Simpan Release untuk masa depan.
+```
+
+Tidak perlu setup environment build kernel. Semua berjalan di cloud GitHub.
+
+---
+
+## 📋 Kompatibilitas Device
+
+| Model | SoC | Kernel | Status |
+|-------|-----|--------|--------|
+| Realme C53 (RMX3760) | Unisoc T612 | 5.15.178-android13-8 | ✅ Teruji |
+| Realme lain dengan Unisoc T612 | Unisoc T612 | 5.15.x | ⚠️ Mungkin work (sesuaikan versi kernel) |
+
+Untuk device lain, fork repo dan update versi kernel di `.github/workflows/build_kernelsu_module.yml`.
+
+---
+
+## 🚀 Panduan Cepat (Flow Lengkap)
+
+### Langkah 1 — Fork & Build Kernel Module
+
+1. Fork repo ini ke akun GitHub Anda
+2. Buka tab **Actions** → **Build KernelSU LKM** → **Run workflow**
+3. Tunggu ~15 menit
+4. GitHub membuat **Release** berisi `kernelsu.ko`
+
+### Langkah 2 — Siapkan PC & HP
 
 ```bash
-# 1. Backup stock boot (perlu HP sudah USB debugging)
-python cli.py        # pilih menu 3
+# Clone fork Anda
+git clone https://github.com/NAMA_ANDA/realme-c53-unlock-root.git
+cd realme-c53-unlock-root
 
-# 2. Build release image
-python release/build_release.py --kernelsu kernelsu.ko --stock output/backup/stock_boot_*.img
-python release/build_release.py --magisk tools/apk/Magisk-v30.7.apk --stock output/backup/stock_boot_*.img
-python release/build_release.py --all   # build semua
+# Download Release dari GitHub
+#   → Buka halaman Releases fork Anda
+#   → Download kernelsu.ko dari release terbaru
+#   → Taruh di: downloads/kernelsu.ko
 
-# 3. Verifikasi artifact
+# Install driver SPRD (Windows)
+python cli.py       # pilih menu 4
+```
+
+### Langkah 3 — Unlock Bootloader
+
+```
+python cli.py       # pilih menu 5 (ikuti screwdriver trick)
+```
+
+HP akan factory reset. Atur Android, aktifkan USB debugging.
+
+### Langkah 4 — Build & Flash
+
+```bash
+# Backup stock boot dari HP
+python cli.py       # pilih menu 3
+
+# Build boot image KernelSU yang siap flash
+python release/build_release.py --kernelsu downloads/kernelsu.ko --stock output/backup/stock_boot_*.img
+
+# Verifikasi artifact
 python release/build/verify_release.py
+
+# Flash ke HP (test-boot dulu)
+python cli.py       # pilih menu 6
 ```
 
-**Output:** `release/runtime/` + `metadata.txt` (SHA256).
+### Langkah 5 — Verifikasi Root
 
-### KernelSU LKM Build
-
-Build `kernelsu.ko` via GitHub Actions:
+```bash
+python cli.py       # pilih menu 8
+# atau
+adb shell su -c id  # harus muncul uid=0(root)
 ```
-https://github.com/Gopartner/realme-c53-unlock-root/actions
-```
-Lihat `AGENTS.md` untuk detail vermagic.
 
 ---
 
-## 🛠️ Untuk End-User
+## 🔄 Pakai Ulang Release Anda
 
-### Persiapan
+Release GitHub Anda terikat ke fork dan HP Anda. Jika perlu root ulang (setelah OTA, factory reset, dll):
 
-- Windows (atau OS dengan ADB/fastboot)
-- Kabel USB data
-- Driver SPRD — `tools/driver/`
+1. Buka halaman Releases fork Anda
+2. Download `kernelsu.ko` yang sama
+3. Backup stock boot baru: `python cli.py` → menu 3
+4. Build ulang: `python release/build_release.py --kernelsu kernelsu.ko --stock output/backup/stock_boot_*.img`
+5. Flash: `python cli.py` → menu 6
 
-### Jalankan CLI
-
-```bash
-python cli.py
-```
-
-| Menu | Fungsi |
-|------|--------|
-| 1 | Cek environment (adb/fastboot) |
-| 2 | Validasi device (RMX3760) |
-| 3 | Backup stock boot image |
-| 4 | Install driver SPRD (buka folder) |
-| 5 | **Unlock bootloader** (CVE-2022-38694) |
-| 6 | **Flash KernelSU** (test-boot dulu) |
-| 7 | **Flash Magisk** |
-| 8 | Verify root (`su -c id`) |
-| 9 | Lihat metadata release |
-
-### Alur lengkap
-
-```
-1. Install driver        → menu 4
-2. Unlock bootloader     → menu 5 + screwdriver trick
-3. Backup stock boot     → menu 3
-4. Build release (dev)   → python release/build_release.py --all
-5. Flash root            → menu 6 (KSU) atau 7 (Magisk)
-6. Verify root           → menu 8
-```
+Tidak perlu build kernel module lagi — `.ko` yang sama tetap work selama versi kernel tidak berubah.
 
 ---
 
@@ -90,50 +111,65 @@ python cli.py
 
 ```
 realme-c53-unlock-root/
-├── cli.py                       ← Entry point (end-user)
-├── src/rmx_unlock/              ← Semua logika (12 modul)
-│   ├── config.py                ← Paths & constants
-│   ├── adb.py                   ← ADB/Fastboot wrapper
-│   ├── flash.py                 ← Flashing dengan safety
-│   ├── unlock.py                ← CVE-2022-38694 unlock
-│   ├── backup.py                ← Backup boot image
-│   ├── validation.py            ← Env/device/checksum
-│   ├── metadata.py              ← Release metadata parser
-│   ├── logger.py                ← Session logging
-│   ├── driver.py                ← Driver installer
-│   └── cli.py                   ← Menu orchestrator
+├── cli.py                       ← Entry point utama (end-user)
+├── src/rmx_unlock/              ← Modul Python (12 file)
 ├── release/
-│   ├── build_release.py         ← Build stage (developer)
-│   └── build/verify_release.py  ← Verifikasi artifact
+│   ├── build_release.py         ← Build boot image yang sudah di-patch
+│   └── build/
+│       ├── verify_release.py    ← Verifikasi SHA256
+│       └── host_patch.py        ← Patch boot tanpa HP
+├── .github/workflows/
+│   ├── build_kernelsu_module.yml ← CI: build kernel module + Release
+│   ├── build_release.yml        ← CI: full patched boot image
+│   └── test_python.yml          ← CI: unit tests
 ├── tools/
-│   ├── unlock/                  ← CVE-2022-38694 tool
-│   ├── driver/                  ← SPRD driver
-│   └── apk/                     ← APK files
-└── output/backup/               ← Stock boot backups
+│   ├── unlock/                  ← Exploit CVE-2022-38694
+│   ├── driver/                  ← Driver USB SPRD
+│   └── apk/                     ← KernelSU Next APK
+└── tests/                       ← Pytest unit tests
 ```
 
 ### Key Design
 
-- **No live patching** — semua patching di build stage, aman untuk end-user
+- **No live patching** — patching boot image dilakukan aman di build stage
 - **Test-boot safety** — KernelSU di-test dulu via `fastboot boot` sebelum di-flash
-- **Checksum** — SHA256 diverifikasi sebelum flashing
-- **Python stdlib only** — zero dependencies
+- **Checksum** — SHA256 diverifikasi sebelum flash
+- **Release Anda sendiri** — setiap fork produce artifact di GitHub masing-masing
+- **Zero Python dependencies** — stdlib only
+
+---
+
+## 🧪 Untuk Developer / Build Kustom
+
+```bash
+# Jalankan test
+python -m pytest tests/ -v
+
+# Patch boot image tanpa device (Linux x86_64)
+python release/build/host_patch.py --kernelsu kernelsu.ko --stock boot.img
+
+# Full build (butuh HP terhubung)
+python release/build_release.py --all
+
+# Lint & format
+pre-commit run --all-files
+```
 
 ---
 
 ## ⚠️ Peringatan
 
-Unlock bootloader akan **menghapus seluruh data** HP. Backup sebelum unlock.
+Unlock bootloader akan **menghapus seluruh data** HP. Backup sebelum melanjutkan.
 
 ---
 
 ## Kredit
 
-- [TomKing062](https://github.com/TomKing062) — CVE-2022-38694
-- [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)
-- [topjohnwu](https://github.com/topjohnwu/Magisk)
+- [TomKing062](https://github.com/TomKing062) — Exploit CVE-2022-38694
+- [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) — KernelSU Next
+- [topjohnwu](https://github.com/topjohnwu/Magisk) — Magisk
 - Realme Open Source
 
 ## Lisensi
 
-Edukasi. Gunakan dengan risiko sendiri.
+Tujuan edukasi. Gunakan dengan risiko sendiri.
