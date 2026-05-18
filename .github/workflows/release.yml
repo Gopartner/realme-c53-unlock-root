@@ -14,12 +14,16 @@ jobs:
     permissions:
       contents: write
     steps:
-      - run: echo hello > test.txt
-      - name: Test step
-        run: cat test.txt
-      - name: Test timeout
-        run: sleep 1
-        timeout-minutes: 30
-      - name: Test if
-        if: inputs.localversion != ''
-        run: echo "has localversion"
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git curl lz4 gcc-aarch64-linux-gnu bc \
+            libelf-dev build-essential bison flex libssl-dev dwarves zip
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          path: repo
+      - name: Clone ACK kernel
+        run: |
+          git clone --depth 1 --branch android14-5.15 \
+            https://android.googlesource.com/kernel/common kernel_source
