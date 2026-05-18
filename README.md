@@ -8,6 +8,20 @@ Every GitHub release you create on your own fork is YOUR personal build — save
 
 ---
 
+## 📋 Requirements
+
+| Item | Needed For |
+|------|-----------|
+| **GitHub account** | Fork + GitHub Actions (build kernel module) |
+| **Python 3.10+** | CLI tool (`python cli.py`) |
+| **ADB + Fastboot** | Flash & verify (included with Platform Tools) |
+| **USB cable** | Data transfer capable |
+| **Windows PC** (or Linux VM) | Bootloader unlock (spd_dump.exe only runs on Windows) |
+
+Don't have Python? Download the **Release ZIP** instead — it includes flash scripts and requires zero setup.
+
+---
+
 ## How It Works
 
 ```
@@ -145,9 +159,7 @@ realme-c53-unlock-root/
 │       ├── verify_release.py    ← SHA256 verification
 │       └── host_patch.py        ← Patch boot without phone
 ├── .github/workflows/
-│   ├── build_kernelsu_module.yml ← CI: build kernel module + Release
-│   ├── build_release.yml        ← CI: full patched boot image
-│   └── test_python.yml          ← CI: run unit tests
+│   └── build_kernelsu_module.yml ← CI: build kernel module + package Release
 ├── tools/
 │   ├── unlock/                  ← CVE-2022-38694 exploit
 │   ├── driver/                  ← SPRD USB driver

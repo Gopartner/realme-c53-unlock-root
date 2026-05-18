@@ -27,7 +27,9 @@ def menu() -> str:
   8) Verify root access
   9) Show release metadata
 
-  q) Quit
+   q) Quit
+
+  Tip: Start with 1 -> 2 -> 4 -> 5 -> 3 -> 6 for full flow.
 """)
     return input("Select: ").strip()
 
