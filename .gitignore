@@ -53,9 +53,6 @@ downloads/
 tmp/
 .cache/
 
-# Allow build scripts tracked in release/
-!release/build/
-
 # Python
 __pycache__/
 *.pyc
@@ -63,3 +60,6 @@ __pycache__/
 dist/
 build/
 .pytest_cache/
+
+# Allow build scripts tracked in release/
+!release/build/

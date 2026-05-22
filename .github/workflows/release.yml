@@ -1,4 +1,4 @@
-name: Build RMX3760 Release
+name: 🔧 Build Your Own Release
 on:
   workflow_dispatch:
     inputs:
@@ -48,12 +48,13 @@ jobs:
       - name: Configure kernel
         run: |
           cd kernel_source
+          git add -A  # clean tree so setlocalversion doesn't add '+'
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- gki_defconfig
-          scripts/config --disable LOCALVERSION_AUTO
           LOCALVER="${{ inputs.localversion || '' }}"
           scripts/config --set-str LOCALVERSION "-android13-8$LOCALVER"
           scripts/config --module KSU
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+          scripts/config --disable LOCALVERSION_AUTO  # disable AFTER olddefconfig
       - name: Build kernel
         run: |
           cd kernel_source
@@ -100,15 +101,7 @@ jobs:
         with:
           name: RMX3760_KernelSU_Release
           path: RMX3760_KernelSU_Release.zip
-      - name: Create GitHub Release
-        if: github.event_name == 'workflow_dispatch'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERMAGIC="${{ steps.extract.outputs.vermagic }}"
-          TAG_NAME="release-$(date +'%Y%m%d-%H%M%S')"
-          gh release create "$TAG_NAME" \
-            --repo "${{ github.repository }}" \
-            --title "RMX3760 Release $TAG_NAME" \
-            --notes "**Vermagic:** $VERMAGIC" \
-            RMX3760_KernelSU_Release.zip
+      # NOTE: Release dibuat MANUAL setelah artifact di-test di hp.
+      # 1. Download artifact dari halaman Actions ini
+      # 2. Flash & test di device
+      # 3. Kalau berhasil → buat Release manual via GitHub Releases
