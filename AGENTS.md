@@ -57,6 +57,50 @@ Then direct to the appropriate scenario above.
 
 ---
 
+## Conversation Flow — AI Harus Proaktif
+
+AI harus melacak progres percakapan dan otomatis menyarankan langkah
+berikutnya tanpa ditanya. Ini aturannya:
+
+### 1. Lacak State Percakapan
+```
+State: idle → dev → build → test → release
+Setiap state punya next-step otomatis.
+Simpan state terakhir di memori percakapan.
+```
+
+### 2. Deteksi Keberhasilan Otomatis
+Ketika AI melihat output sukses (flash OK, root verified, build selesai),
+AI HARUS langsung menyarankan langkah berikutnya. Contoh:
+
+| AI melihat | AI harus bilang |
+|------------|----------------|
+| "Flash selesai, HP boot normal" | "Root udah jalan. Verify `adb shell su -c id` dulu? |
+| "Vermagic cocok" | "Build cocok. Mau test-boot sekarang? |
+| "Build Actions selesai" | "Artifact siap. Download & extract, lanjut test? |
+| "Test gagal (bootloop)" | "Kembali ke Dev Mode, perbaiki dulu. Mau saya cek log?" |
+
+### 3. Jangan Diam Saja
+Setelah menjalankan perintah atau memberikan informasi, AI harus
+menambahkan 1-2 baris "Lanjutan:" yang menawarkan step berikutnya.
+
+### 4. Jika User Bingung
+Jika user jawab singkat ("gitu", "oh", "ok") tanpa arahan jelas, AI
+harus tebak state terakhir dan tawarkan step paling logis.
+
+### 5. State Tracker (internal AI)
+```
+DEV MODE:
+  └─ edit selesai → push → trigger build (otomatis suggest)
+BUILD MODE:
+  └─ build selesai → suggest download → extract → test
+TEST MODE:
+  └─ test berhasil → suggest buat Release
+  └─ test gagal → suggest balik ke Dev Mode
+RELEASE MODE:
+  └─ release selesai → suggest update end-user docs
+```
+
 ## Device Identity
 - **Model**: Realme C53 (RMX3760)
 - **SoC**: Unisoc T612 (ums9230)
