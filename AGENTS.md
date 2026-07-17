@@ -687,3 +687,5 @@ Use when: user has tested the build artifact on device successfully.
 - **KernelSU-RMX3760 repo**: Separate repo with pre-built boot images + recovery tools.
   https://github.com/Gopartner/KernelSU-RMX3760
   Tested & working on RMX3760 (2026-07-17). Use this for end-user flash.
+- **BROM mode button sequence (correct)**: Press all buttons (Power+Volume) to turn off → Release Power after phone off → Press both Volume buttons → Plug USB to PC.
+  Do NOT hold Power while plugging USB — this will not enter BROM mode.
