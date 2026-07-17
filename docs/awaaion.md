@@ -1,1 +1,0 @@
-opencode -s ses_1c673201cffeuUsxsAWKOuPHHQ

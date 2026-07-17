@@ -22,8 +22,9 @@ This file is the **constitution** for the AI agent. It defines:
 | **Root method** | ✅ KernelSU LKM | Test-boot safety, requires matching vermagic |
 | | ✅ Magisk | Direct flash (no test-boot) |
 | | ✅ Hybrid (Magisk+KSU) | **Recommended for RMX3760** — Magisk v27 for root, KSU module loaded via Magisk module |
+| | ✅ KernelSU Next LKM (GK12) | **TESTED & WORKING** — `u:r:ksu:s0`, fw `RMX3760export_15_H.01` |
 | **Init_boot** | ✅ Has partition | Stock init_boot contains real init + ramdisk |
-| **KSU-only** | ❌ Bug ksud init | KSU init binary fails to load module on devices without stock ramdisk; use hybrid instead |
+| **KSU-only** | ⚠️ Bug ksud init | KSU init binary fails on some setups; GK12 mode works (tested) |
 | **Build kernel module** | ✅ Via GitHub Actions | CI builds kernelsu.ko |
 | | ✅ Local build | Via kernel_ack_5.15/ |
 | **Device support** | ✅ Any device with a TOML profile | See devices/ directory |
@@ -109,6 +110,7 @@ RELEASE MODE:
 - **Build**: `realme/RMX3760/RE58C2:15/AP3A.240905.015.A2/T.R4T2.1773288057:user/release-keys`
 - **Arch**: aarch64, ARM Cortex-A55 (6x) + A78 (2x)
 - **Slots**: A/B (`boot_a`/`boot_b`, `init_boot_a`/`init_boot_b`)
+- **Tested Root Method**: KernelSU Next LKM (GK12) — `u:r:ksu:s0`, fw `RMX3760export_15_H.01`
 
 ## Alur Kerja
 
@@ -682,3 +684,6 @@ Use when: user has tested the build artifact on device successfully.
   Magisk v27 provides `su -c id` directly. Download from GitHub releases.
 - **Device has init_boot**: `/dev/block/by-name/init_boot_a` (8MB). Stock contains real Android init.
   KSU init_boot can be built with `ksud boot-patch --partition init_boot`.
+- **KernelSU-RMX3760 repo**: Separate repo with pre-built boot images + recovery tools.
+  https://github.com/Gopartner/KernelSU-RMX3760
+  Tested & working on RMX3760 (2026-07-17). Use this for end-user flash.
