@@ -1,0 +1,166 @@
+name: Build KernelSU-Next A14 (5.4.254) Boot
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git curl lz4 gcc-aarch64-linux-gnu \
+            binutils-aarch64-linux-gnu bc libelf-dev build-essential \
+            bison flex libssl-dev zip cpio python3
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          path: repo
+
+      - name: Download AOSP clang r416183b (12.0.5, matches stock CC_VERSION_TEXT)
+        run: |
+          curl -L --retry 3 -o clang.tar.gz \
+            "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android12-release/clang-r416183b.tar.gz"
+          mkdir -p toolchain
+          tar -xzf clang.tar.gz -C toolchain
+          CLANG_BIN="$(dirname "$(find toolchain -type f -name clang -path '*bin/clang' | head -1)")"
+          echo "CLANG_BIN=$CLANG_BIN"
+          echo "$CLANG_BIN" >> "$GITHUB_PATH"
+          "$CLANG_BIN/clang" --version | head -1
+
+      - name: Clone realme 5.4.254 GPL kernel source
+        run: |
+          git clone --filter=blob:none --no-checkout \
+            https://github.com/realme-kernel-opensource/realme_C51_C53_Note50_C60_C51_N53-AndroidU-kernel-source.git kernel_source
+          cd kernel_source
+          # Device commit hash is 6794bd59091 — use it if present in GPL history
+          # for best vendor-module symbol (modversions) compatibility.
+          if git cat-file -e 6794bd59091 2>/dev/null; then
+            echo "checking out device commit 6794bd59091"
+            git checkout 6794bd59091
+          else
+            echo "device commit not in GPL history, using master"
+            git checkout master
+          fi
+          grep -E '^VERSION|^PATCHLEVEL|^SUBLEVEL|^EXTRAVERSION' Makefile
+
+      - name: Add KernelSU-Next (built-in)
+        run: |
+          cd kernel_source
+          git clone --depth 1 --branch dev \
+            https://github.com/KernelSU-Next/KernelSU-Next.git
+          mkdir -p drivers/kernelsu
+          cp -r KernelSU-Next/kernel/* drivers/kernelsu/
+          if [ -L "drivers/kernelsu/include/uapi" ]; then
+            rm drivers/kernelsu/include/uapi
+            cp -r KernelSU-Next/uapi drivers/kernelsu/include/uapi
+          fi
+          grep -q 'source "drivers/kernelsu/Kconfig"' drivers/Kconfig || \
+            sed -i '/endmenu/i\source "drivers/kernelsu/Kconfig"' drivers/Kconfig
+
+      - name: Configure kernel (base = device config_a14_5.4.254)
+        run: |
+          cd kernel_source
+          cp ../repo/release/build/config_a14_5.4.254 .config
+          git add -A  # clean tree so setlocalversion doesn't add '+'
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=clang \
+            CLANG_TRIPLE=aarch64-linux-gnu- LLVM_IAS=1 olddefconfig
+          # Reproduce exact device UTS_RELEASE: 5.4.254-android12-9-gf6794bd59091-ab267
+          scripts/config --set-str LOCALVERSION "-android12-9-gf6794bd59091-ab267"
+          scripts/config --disable LOCALVERSION_AUTO
+          # Stock vendor modules are signed with realme's key → our kernel must
+          # NOT enforce signatures or mali/wifi/etc. will be rejected.
+          scripts/config --disable MODULE_SIG
+          scripts/config --disable MODULE_SIG_FORCE
+          scripts/config --disable MODULE_SIG_ALL
+          # Full LTO is slow/OOM-prone on CI and does not affect vermagic/CRCs.
+          scripts/config --disable LTO
+          scripts/config --disable LTO_CLANG
+          scripts/config --disable LTO_CLANG_THIN
+          scripts/config --disable DEBUG_INFO
+          # KernelSU built-in
+          scripts/config --enable KSU
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=clang \
+            CLANG_TRIPLE=aarch64-linux-gnu- LLVM_IAS=1 olddefconfig
+        env:
+          MSYS2_ARG_CONV_EXCL: "*"
+
+      - name: Verify config
+        run: |
+          cd kernel_source
+          echo "--- UTS_RELEASE settings ---"
+          grep -E '^CONFIG_LOCALVERSION=|^CONFIG_LOCALVERSION_AUTO|^CONFIG_KSU=|^CONFIG_MODULE_SIG|^CONFIG_LTO|^CONFIG_KPROBES=|^CONFIG_EXT4_FS=' .config || true
+          test "$(grep -c '^CONFIG_KSU=y' .config)" = "1" || { echo "FAIL: CONFIG_KSU not y"; exit 1; }
+          grep -q 'CONFIG_LOCALVERSION="-android12-9-gf6794bd59091-ab267"' .config \
+            || { echo "FAIL: LOCALVERSION wrong"; exit 1; }
+          grep -q '^# CONFIG_LTO_CLANG is not set' .config \
+            || { echo "FAIL: LTO_CLANG still enabled"; exit 1; }
+
+      - name: Build kernel Image
+        run: |
+          cd kernel_source
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=clang \
+            CLANG_TRIPLE=aarch64-linux-gnu- LLVM_IAS=1 -j$(nproc) Image
+        timeout-minutes: 60
+
+      - name: Verify UTS_RELEASE (vermagic)
+        run: |
+          cd kernel_source
+          grep UTS_RELEASE include/generated/utsrelease.h
+          grep -q '"5.4.254-android12-9-gf6794bd59091-ab267"' include/generated/utsrelease.h \
+            || { echo "FAIL: vermagic mismatch"; exit 1; }
+          ls -la arch/arm64/boot/Image
+          sha256sum arch/arm64/boot/Image
+
+      - name: Repack boot image (make_boot.py + committed stock header/ramdisk)
+        run: |
+          python3 repo/release/build/make_boot.py \
+            --kernel kernel_source/arch/arm64/boot/Image \
+            --header repo/release/build/stock_a14_header.bin \
+            --ramdisk repo/release/build/stock_a14_ramdisk.lz4 \
+            --size 67108864 \
+            -o kernelsu_patched_boot.img
+
+      - name: Package release
+        run: |
+          mkdir -p staging/apk staging/modules
+          cp kernelsu_patched_boot.img staging/
+          cp kernel_source/arch/arm64/boot/Image staging/kernel_Image.bin
+          cp -r repo/tools/apk staging/apk/
+          cp repo/release/build/flash.bat staging/
+          cp repo/release/build/flash.sh staging/
+          printf '%s\n' \
+            'Realme C53 (RMX3760) A14 KernelSU Built-in' \
+            '' \
+            'Kernel: 5.4.254-android12-9-gf6794bd59091-ab267' \
+            'KSU: KernelSU-Next (built-in, CONFIG_KSU=y)' \
+            '' \
+            'FLASH (test first):' \
+            '  adb reboot bootloader' \
+            '  fastboot boot kernelsu_patched_boot.img' \
+            '  # if boot OK:' \
+            '  fastboot flash boot_a kernelsu_patched_boot.img' \
+            '  fastboot flash boot_b kernelsu_patched_boot.img' \
+            '  fastboot reboot' \
+            '  adb install apk/KernelSU_Next.apk' \
+            '  adb shell su -c id' \
+            '' \
+            'WARNING: vendor modules (mali/wifi/bt) must load for display/touch.' \
+            'If device soft-bricks: reflash stock boot via SPRD mode.' \
+            'Recovery: spd_dump set_active a write_part boot_a <stock> reset' \
+            > staging/README.txt
+          cd staging
+          zip -r "../RMX3760_A14_KernelSU_Release.zip" ./*
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RMX3760_A14_KernelSU_Release
+          path: RMX3760_A14_KernelSU_Release.zip
+
+      # NOTE: test on device (fastboot boot) before flashing permanently.
+      # If vendor modules fail to load (CRC mismatch), fall back to master
+      # branch of GPL source or report back to rework the config.

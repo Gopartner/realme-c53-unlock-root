@@ -1,0 +1,167 @@
+.\spd_dump.exe --wait 300 exec_addr 0x65015f08 fdl .\fdl1-sign.bin 0x65000800 fdl .\lk-fdl2-sign.bin 0x9EFFFE00 exec
+
+
+
+
+Dari log downgrade tadi, bagian yang paling mencurigakan adalah ini:
+
+```text
+Erase Part Done: l_runtimenv1
+Erase Part Done: persist
+Erase Part Done: splloader
+```
+
+Untuk kasus **IMEI hilang**, partisi yang perlu diperiksa terutama adalah partisi NV/modem berikut.
+
+| Partisi                   | Fungsi umum                                              |     Prioritas |
+| ------------------------- | -------------------------------------------------------- | ------------: |
+| `prodnv`                  | Data NV produksi/perangkat, dapat memuat identitas radio | Sangat tinggi |
+| `l_fixnv1_a`              | Data NV tetap/modem slot A                               | Sangat tinggi |
+| `l_fixnv2_a`              | Data NV tetap/modem slot A                               | Sangat tinggi |
+| `l_fixnv1_b`              | Data NV tetap/modem slot B                               | Sangat tinggi |
+| `l_fixnv2_b`              | Data NV tetap/modem slot B                               | Sangat tinggi |
+| `l_runtimenv1`            | Data NV runtime modem                                    |        Tinggi |
+| `l_runtimenv2`            | Salinan/runtime NV lain                                  |        Tinggi |
+| `calinv`                  | Data kalibrasi radio                                     |        Tinggi |
+| `persist`                 | Kalibrasi dan konfigurasi perangkat tertentu             | Sedang–tinggi |
+| `l_modem_a` / `l_modem_b` | Firmware modem, bukan biasanya tempat IMEI utama         |        Sedang |
+
+Yang paling penting dari log Anda:
+
+```text
+Erase Part Done: l_runtimenv1
+Erase Part Done: persist
+```
+
+Jadi dua partisi tersebut memang telah dihapus. Tetapi **IMEI belum tentu disimpan langsung di `l_runtimenv1` atau `persist`**. Pada perangkat Unisoc/Spreadtrum, data IMEI biasanya terkait dengan struktur NV seperti `prodnv`, `l_fixnv*`, dan runtime NV. Lokasi persisnya dapat berbeda antar implementasi vendor.
+
+Selain itu, log yang Anda kirim **tidak menunjukkan**:
+
+```text
+Erase Part Done: prodnv
+Erase Part Done: l_fixnv1_a
+Erase Part Done: l_fixnv2_a
+Erase Part Done: l_fixnv1_b
+Erase Part Done: l_fixnv2_b
+Erase Part Done: l_runtimenv2
+Erase Part Done: calinv
+```
+
+Jadi dari potongan log tersebut, belum ada bukti bahwa partisi NV utama ikut dihapus. Namun kita tetap harus memeriksa apakah fase flash sebelumnya pernah menulis atau menghapus partisi-partisi itu.
+
+## Yang harus dilihat di backup Android 15
+
+Cari file backup dengan nama:
+
+```text
+prodnv.bin
+l_fixnv1_a.bin
+l_fixnv2_a.bin
+l_fixnv1_b.bin
+l_fixnv2_b.bin
+l_runtimenv1.bin
+l_runtimenv2.bin
+calinv.bin
+persist.bin
+```
+
+Kalau backup dibuat menggunakan:
+
+```text
+r all
+```
+
+atau:
+
+```text
+r all_lite
+```
+
+perhatikan bahwa `all_lite` bisa mengecualikan beberapa partisi berdasarkan implementasi tool. Jangan langsung berasumsi semua partisi NV sudah ikut dibackup; cek file fisiknya.
+
+Di PowerShell, dari folder backup, jalankan:
+
+```powershell
+Get-ChildItem -Recurse -File |
+Where-Object {
+    $_.Name -match 'prodnv|fixnv|runtimenv|calinv|persist'
+} |
+Select-Object FullName, Length, LastWriteTime |
+Format-Table -AutoSize
+```
+
+Hasilnya akan memperlihatkan file NV yang benar-benar tersedia.
+
+## Yang juga perlu diperiksa dari log flash
+
+Cari seluruh log/script downgrade dengan keyword:
+
+```text
+prodnv
+fixnv
+runtimenv
+calinv
+persist
+erase_part
+write_part
+```
+
+Di PowerShell:
+
+```powershell
+Get-ChildItem -Recurse -File |
+Select-String -Pattern 'prodnv|fixnv|runtimenv|calinv|persist|Erase Part Done|Write Part Done' |
+Select-Object Path, LineNumber, Line
+```
+
+Tujuannya adalah mencari apakah selama downgrade ada perintah seperti:
+
+```text
+Erase Part Done: prodnv
+Write Part Done: prodnv
+```
+
+atau:
+
+```text
+Erase Part Done: l_fixnv1_a
+Write Part Done: l_fixnv1_a
+```
+
+Kalau partisi NV utama pernah ditimpa dengan file dari PAC Android 14, itu lebih relevan terhadap hilangnya IMEI dibanding sekadar `persist` terhapus.
+
+## Urutan pemeriksaan yang aman
+
+1. **Jangan flash ulang PAC Android 14 lagi.**
+2. Cek apakah IMEI benar-benar hilang dengan:
+
+   ```text
+   *#06#
+   ```
+3. Periksa status baseband di:
+
+   ```text
+   Pengaturan → Tentang perangkat → Versi → Versi baseband
+   ```
+4. Jika baseband juga `Unknown`, masalah mungkin lebih luas dari data IMEI—bisa terkait firmware modem, NV, atau kecocokan Android 14 dengan konfigurasi perangkat.
+5. Cari backup asli Android 15 untuk partisi NV.
+6. Bandingkan daftar partisi backup dengan partisi perangkat saat ini.
+7. Jika ada backup **milik perangkat ini sendiri**, prioritaskan pemulihan partisi NV yang benar-benar hilang/terhapus, bukan menulis seluruh backup secara acak.
+
+Karena Anda sebelumnya memiliki backup Android 15 dari perangkat ini, itu sangat penting. **Jangan menggunakan `prodnv`, `fixnv`, atau data NV dari firmware PAC atau dari perangkat lain**. Data tersebut dapat bersifat unik per unit dan terkait identitas radio serta kalibrasi.
+
+Dari log yang ada, saya akan mulai memeriksa:
+
+```text
+prodnv
+l_fixnv1_a
+l_fixnv2_a
+l_fixnv1_b
+l_fixnv2_b
+l_runtimenv1
+l_runtimenv2
+calinv
+persist
+```
+
+Lalu kirim hasil perintah PowerShell tadi. Dari daftar file dan ukurannya, kita bisa menentukan backup mana yang tersedia dan mana yang paling mungkin perlu dipulihkan.
