@@ -1,0 +1,261 @@
+# PANDUAN EKSEKUSI LENGKAP — DOWNGRADE RMX3760 A15 -> A14
+# Realme RMX3760 (UMS9230) — jalur spd_dump manual
+# Disusun: 2026-08-01
+# Jalankan semua langkah di cmd (buka: Win+R -> cmd -> Enter)
+
+============================================================
+ ISI FILE
+============================================================
+  0. PERSIAPAN                       (tidak ada script)
+  1. KONFIGURASI 1 KALI              (cd + dir)
+  2. CARA MASUK BROM                 (tidak ada script)
+  3. FASE 1 — backup A15 (opsional)  -> backup_a15_fresh.bat
+  4. FASE 2 — bootchain kritis       -> flash_phase1_bootchain.bat
+  5. FASE 3 — modem/NV/DSP           -> flash_phase2_modem.bat
+  6. FASE 4 — sistem Android         -> flash_phase3_system.bat
+  7. FASE 5 — finalize + SPL+reboot  -> flash_phase4_finalize.bat
+  8. VERIFIKASI readback             -> verify_readback.bat
+  9. RESTORE A15 (jika gagal)        -> restore_a15.bat
+ 10. PANDUAN ERROR SPESIFIK          (tidak ada script)
+ 11. DAFTAR FILE & PARTISI           (tidak ada script)
+
+============================================================
+ 0. PERSIAPAN
+    -> TIDAK ADA SCRIPT. Cukup baca.
+============================================================
+- HP Realme RMX3760, layar mati total, hanya bisa BROM.
+- PC Windows dengan port USB 2.0 langsung (jangan hub/splitter).
+- Kabel USB pendek berkualitas (data, bukan cuma charge).
+- Baterai HP: jika bisa, coba cas dulu beberapa jam.
+- JANGAN cabut kabel di tengah fase yang sedang berjalan.
+
+Folder utama:  D:\realme-c53-recovery\03_downgrade_a14\
+
+============================================================
+ 1. KONFIGURASI 1 KALI
+    -> Perintah: cd + dir (bukan script .bat)
+============================================================
+Buka cmd, lalu:
+
+  cd /d D:\realme-c53-recovery\03_downgrade_a14
+
+Periksa semua file ada (harusnya muncul daftar script):
+
+  dir
+
+Harusnya terlihat:
+  backup_a15_fresh.bat
+  flash_phase1_bootchain.bat
+  flash_phase2_modem.bat
+  flash_phase3_system.bat
+  flash_phase4_finalize.bat
+  verify_readback.bat
+  restore_a15.bat
+  README_DOWNGRADE.md
+  manifest-pac-a14.txt
+
+============================================================
+ 2. CARA MASUK BROM (paling penting)
+    -> TIDAK ADA SCRIPT. Ini gerakan tangan di HP.
+============================================================
+Cara 1 (biasa):
+  1. Matikan HP total (jika menyala).
+  2. Tekan DAN TAHAN tombol: Volume UP + Volume DOWN + Power.
+  3. Tahan terus sambil mencolok kabel USB ke PC.
+  4. Lepas tombol setelah 5-10 detik (Windows bisa bunyi 'device connected').
+
+Cara 2 (jika layar/HP mati total):
+  - Pastikan HP benar-benar off.
+  - Colok USB, lalu tekan & tahan kombinasi tombol yang sama
+    selama +- 5-10 detik.
+
+Setiap fase baru = masuk BROM ULANG dulu.
+KECUALI fase 5 (flash_phase4_finalize.bat) yang reset sendiri.
+
+============================================================
+ 3. FASE 1 — Backup A15 (OPSIONAL)
+    SCRIPT YANG DIJALANKAN:  backup_a15_fresh.bat
+============================================================
+Tujuan: titik revert segar sebelum flash.
+PENTING: backup fresh ini BISA DILEWATI. Titik revert utama
+sudah ada di D:\porting-custom-rom\backup\20260727_231930\
+(27 file sudah diverifikasi) + SPL A15 terpisah.
+
+Jika ingin backup (membaca ~8.5GB, lama):
+  1. Masuk BROM.
+  2. Jalankan:  backup_a15_fresh.bat
+  3. Tunggu selesai (super.img 8GB butuh waktu lama).
+  4. Jika muncul "bad length"/"timeout reached" di tengah:
+     -> HANYA baca, TIDAK merusak apa pun.
+     -> Lewati saja, lanjut ke FASE 2.
+
+============================================================
+ 4. FASE 2 — Flash bootchain kritis
+    SCRIPT YANG DIJALANKAN:  flash_phase1_bootchain.bat
+============================================================
+Isi: vbmeta*, ocdt, trustos, teecfg, sml, uboot.
+
+Langkah:
+  1. Masuk BROM (3-kombinasi tombol).
+  2. Jalankan:  flash_phase1_bootchain.bat
+  3. Tunggu sampai tampil "FASE 1 SELESAI".
+
+Jika berhasil, output akhir:
+  [=] ... (progress) ...
+  FASE 1 SELESAI. Jangan reboot dulu.
+  Lanjut ke FASE 2 (flash_phase2_modem.bat).
+
+Jangan reboot HP setelah fase ini. Lanjut fase berikutnya.
+
+============================================================
+ 5. FASE 3 — Flash modem/NV/DSP
+    SCRIPT YANG DIJALANKAN:  flash_phase2_modem.bat
+============================================================
+Isi: l_fixnv1_a (nvitem), prodnv, modem, deltanv, LTE/AG DSP, pm_sys.
+
+Langkah:
+  1. Masuk BROM ULANG (3-kombinasi tombol).
+  2. Jalankan:  flash_phase2_modem.bat
+  3. Tunggu sampai tampil "FASE 2 SELESAI".
+
+============================================================
+ 6. FASE 4 — Flash sistem Android (paling lama)
+    SCRIPT YANG DIJALANKAN:  flash_phase3_system.bat
+============================================================
+Isi: boot, vendor_boot, dtbo, my_preload, super (5.9GB),
+     cache, blackbox, logo, persist; erase userdata.
+
+Langkah:
+  1. Masuk BROM ULANG.
+  2. Jalankan:  flash_phase3_system.bat
+  3. TUNGGU LAMA (super 5.9GB = beberapa menit sampai 10+ menit).
+  4. JANGAN putus kabel / matikan PC di fase ini.
+  5. Tunggu sampai tampil "FASE 3 SELESAI".
+
+============================================================
+ 7. FASE 5 — Finalize + SPL + reboot
+    SCRIPT YANG DIJALANKAN:  flash_phase4_finalize.bat
+============================================================
+Isi: erase misc/miscdata/metadata/sysdumpdb/l_runtimenv1,
+     tulis SPL A14 (paling akhir), set_active a, reset.
+
+Langkah:
+  1. Masuk BROM ULANG.
+  2. Jalankan:  flash_phase4_finalize.bat
+  3. Script akan reset HP otomatis.
+  4. Pantau layar HP:
+     - Logo Realme muncul, lalu boot ke Android -> DOWNGRADE SUKSES.
+     - Hang / restart loop / layar mati -> masuk BROM lagi,
+       jalankan restore (bagian 9).
+
+CATATAN: setelah fase ini HP reboot; JANGAN khawatir jika layar
+mati beberapa saat pertama.
+
+============================================================
+ 8. VERIFIKASI readback
+    SCRIPT YANG DIJALANKAN:  verify_readback.bat
+============================================================
+Tujuan: pastikan file yang tertulis = file PAC (hash sama).
+Langkah:
+  1. Masuk BROM ULANG.
+  2. Jalankan:  verify_readback.bat
+  3. Lihat hasil: semua partisi harus bertuliskan PASS.
+     Contoh output:
+        verify_uboot_a  PASS  44219D96...
+        verify_boot_a   PASS  5DB3ACED...
+     PASS: 8  FAIL: 0
+
+Jika ada FAIL:
+  -> Bandingkan hash 'verify_...' vs 'PAC: ...'. Harus sama.
+  -> Jika beda: flash ulang partisi yang FAIL (ulangi fase-nya).
+
+============================================================
+ 9. JIKA GAGAL / SEMI-BRICK — restore A15
+    SCRIPT YANG DIJALANKAN:  restore_a15.bat
+============================================================
+Tujuan: kembalikan ke A15 stock (jaring pengaman).
+Langkah:
+  1. Masuk BROM (3-kombinasi tombol).
+  2. Jalankan:  restore_a15.bat
+  3. Tunggu sampai "RESTORE A15 SELESAI - device reboot ke A15 stock".
+  4. Jika masih tidak boot setelah restore:
+     -> kemungkinan besar masalah HARDWARE (baterai/power).
+     -> Tes: cas original berjam-jam, cek HP hangat.
+
+============================================================
+ 10. PANDUAN ERROR SPESIFIK
+     -> TIDAK ADA SCRIPT. Referensi bila error.
+============================================================
+
+A) "bad length (8191, expected 63494)" + "timeout reached"
+   Arti: FDL2/USB putus di tengah operasi (biasanya saat baca
+         blok besar, misal super.img).
+   Penyebab umum: port USB 3.0 / hub / kabel jelek / kontak.
+   Solusi:
+     - Cabut kabel, matikan HP.
+     - Masuk BROM ulang.
+     - Ulangi script yang sama (aman: tiap fase erase dulu).
+     - Pakai port USB 2.0 langsung di motherboard.
+     - Coba kabel lain / port lain.
+   Jika terjadi di backup_a15_fresh.bat: lewati saja (opsional).
+
+B) "GAGAL!" muncul di akhir script
+   Arti: spd_dump keluar dengan error code.
+   Solusi: masuk BROM ulang, ulangi fase yang sama. Periksa log
+   spd_dump (folder Log\ di 01_alat\spd_tools\).
+
+C) Windows tidak mendeteksi device (tidak ada bunyi connect)
+   Solusi:
+     - Pastikan kombinasi tombol benar (UP+DOWN+Power).
+     - Tahan lebih lama (10-15 detik).
+     - Coba port USB lain.
+     - Cek Device Manager: 'LGE Mobile' / 'SPD' / 'Qualcomm' device
+       muncul saat BROM.
+
+D) Error di verify: FAIL
+   Solusi: flash ulang partisi yang bersangkutan (ulangi fase),
+   lalu verify lagi.
+
+E) HP boot ke A14 tapi WiFi/sinyal/IMEI bermasalah
+   Arti: NV (l_fixnv1_a/prodnv) mungkin perlu di-flash ulang.
+   Solusi: ulangi fase 3 (flash_phase2_modem.bat) lalu boot lagi.
+
+F) HP tidak boot sama sekali setelah fase 5
+   Solusi:
+     - Masuk BROM, jalankan restore_a15.bat (bagian 9).
+     - Jika A15 juga tidak boot: masalah hardware/power.
+
+============================================================
+ 11. DAFTAR FILE & PARTISI (referensi)
+     -> TIDAK ADA SCRIPT. Referensi saja.
+============================================================
+PAC A14 (bootchain): D:\downloader-firmware\results\pac-bootchain\
+Backup A15 (revert): D:\porting-custom-rom\backup\20260727_231930\
+FDL exploit:         D:\realme-c53-recovery\01_alat\spd_tools\
+avbtool:             D:\realme-c53-recovery\tools\avbtool.py
+
+Partisi yang DI-FLASH per fase:
+  Fase 1: vbmeta_a, ocdt_a, vbmeta_system_a, vbmeta_system_ext_a,
+          vbmeta_vendor_a, vbmeta_product_a, vbmeta_odm_a,
+          trustos_a, teecfg_a, sml_a, uboot_a
+  Fase 2: l_fixnv1_a, prodnv, l_modem_a, l_deltanv_a, l_ldsp_a,
+          l_gdsp_a, l_agdsp_a, pm_sys_a
+  Fase 3: boot_a, vendor_boot_a, dtbo_a, my_preload, super,
+          cache, blackbox, logo, persist (userdata di-erase)
+  Fase 4: erase (l_runtimenv1, misc, sysdumpdb, metadata, miscdata),
+          tulis splloader, set_active a, reset
+
+Partisi yang TIDAK disentuh (tidak ada image di PAC / generic):
+  hypervsior_a/b, avbmeta_rs_a/b, common_rs1_a/b, common_rs2_a/b,
+  init_boot_a/b, dtb_a/b, opporeserve, oplusreserve1/3/5, calinv,
+  l_fixnv2_a/b, l_runtimenv2, uboot_log, miscdata (erase di Fase 4),
+  fbootlogo
+
+Status AVB (hasil cek avbtool):
+  Semua rollback index A15 & A14 = 0, kunci publik identik
+  -> downgrade TIDAK diblokir AVB.
+  Hasil lengkap: D:\realme-c53-recovery\hasil-avb-a15-vs-a14.txt
+
+============================================================
+ SELESAI — SEMOGA BERHASIL
+============================================================

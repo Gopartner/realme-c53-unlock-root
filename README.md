@@ -4,10 +4,68 @@
 
 **Unlock bootloader and root your Realme C53 (and other Realme devices). Supports KernelSU, Magisk, or a hybrid of both.**
 
-> ⚠️ **RMX3760 (Unisoc T612) users**: KSU-only is currently broken due to a ksud init bug.
-> **Hybrid Magisk v27 + KernelSU module via Magisk module** is the stable solution. See [docs/KSU_INIT_BUG.md](docs/KSU_INIT_BUG.md).
+> ⚠️ **RMX3760 (Unisoc T612)**: Bootloader unlock + Magisk root are **verified working on BOTH Android 15 and Android 14**.
+> KernelSU LKM works only on the Android 15 kernel (`5.15.178`, `MODULE_SIG_FORCE=n`).
+> On Android 14 (`5.4.254`, `MODULE_SIG_FORCE=y`) the kernel **rejects unsigned modules** (`insmod` → `Key was rejected by service`) — use Magisk there.
 
 Every GitHub release you create on your own fork is YOUR personal build — save it and reuse it anytime you need to root again on the same device.
+
+---
+
+## ✅ Verified Results (2026-08-02)
+
+| Method | Android 15 (`5.15.178`) | Android 14 (`5.4.254`) |
+|--------|------------------------|------------------------|
+| **Bootloader unlock** (CVE-2022-38694) | ✅ OK | ✅ OK |
+| **Magisk root** | ✅ OK | ✅ OK |
+| **KernelSU LKM** (module-load) | ✅ OK (`MODULE_SIG_FORCE=n`) | ❌ blocked (`MODULE_SIG_FORCE=y`) |
+
+> 🔎 Check your kernel first: `adb shell uname -r`
+> - `5.15.178-android13-8` → KernelSU / hybrid works
+> - `5.4.254-android12-9` → use **Magisk** (KernelSU needs a full kernel rebuild)
+
+Full step-by-step with exact commands, logs, and MD5 checksums: **[docs/UNLOCK_ROOT_GUIDE.md](docs/UNLOCK_ROOT_GUIDE.md)**
+
+> ✅ **Relock bootloader — VERIFIED (2026-08-05, Android 14)**:
+> `fastboot flashing lock` → **`Lock bootloader successfully!`** → `ro.boot.flash.locked=1`,
+> `verifiedbootstate=green`, `vbmeta.device_state=locked`, device boots normally.
+> Full procedure: [Relock Bootloader](#-relock-bootloader).
+
+---
+
+## 🔒 Relock Bootloader
+
+Restore the device to a fully stock, locked state (verified on Android 14 / RMX3760).
+
+### Prerequisites
+- Stock boot images backed up (e.g. `output/backup/boot_a_a14_stock.img`, `boot_b_a14_stock.img`)
+- Root removed — restore stock boot on **both slots** so AVB verification passes after locking
+
+### Steps
+
+```bash
+# 1. Flash stock boot to BOTH slots (replaces Magisk-patched boot / removes root)
+adb reboot bootloader
+fastboot flash boot_a output/backup/boot_a_a14_stock.img
+fastboot flash boot_b output/backup/boot_b_a14_stock.img
+
+# 2. Re-lock the bootloader (confirm on the phone screen with volume keys if prompted)
+fastboot flashing lock
+#   → fastboot getvar locked   → "Lock bootloader successfully!"
+
+# 3. Reboot and verify
+fastboot reboot
+adb shell getprop ro.boot.flash.locked        # 1
+adb shell getprop ro.boot.verifiedbootstate   # green
+adb shell getprop ro.boot.vbmeta.device_state # locked
+```
+
+> ℹ️ `fastboot flashing lock` works even though the bootloader was unlocked via the CVE
+> exploit. First boot after locking takes longer (factory reset) — just wait.
+>
+> ℹ️ If your device reports `Not implement.` for `flashing lock`, re-lock by zeroing the
+> `miscdata` marker (offset `8192`, 64 bytes) with the same `spd_dump` CVE toolchain used
+> for unlocking: a zeroed marker = locked state.
 
 ---
 
@@ -75,6 +133,8 @@ Fork this repo → Run GitHub Actions → Get YOUR Release
 | Chipset Family | SoC/Platform | Unlock Method | Status |
 |----------------|-------------|---------------|--------|
 | **SPRD** (Unisoc) | T606, T610, **T612**, T618 | CVE-2022-38694 | ✅ Tested (C53) |
+| **Realme C53 (RMX3760)** Android 15 | T612 | CVE-2022-38694 | ✅ Unlock + Magisk + KSU LKM |
+| **Realme C53 (RMX3760)** Android 14 | T612 | CVE-2022-38694 | ✅ Unlock + Magisk (KSU blocked: `MODULE_SIG_FORCE=y`) |
 | **MediaTek** | Helio Gxx, Dimensity | BROM mode (mtkclient) | ⚠️ Profile example |
 | **Qualcomm** | Snapdragon 6xx/7xx | EDL / fastboot oem | ⚠️ Profile example |
 

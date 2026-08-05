@@ -1,0 +1,115 @@
+branch:main, sha1:fa0becf5e3f026b3b99103c65de6eb9a8348b27c
+Successfully connected to port: 4
+CHECK_BAUD bootrom
+BSL_REP_VER: "SPRD3\0"
+CMD_CONNECT bootrom
+current exec_addr is 0x65015f08
+SEND fdl1-dl.bin to 0x65000800
+SEND custom_exec_no_verify_65015f08.bin to 0x65015f08
+EXEC FDL1
+CHECK_BAUD FAIL
+CHECK_BAUD FDL1
+BSL_REP_VER: "Spreadtrum Boot Block version 1.1\0{E#R*R!O&R}\0"
+CMD_CONNECT FDL1
+CHANGE_BAUD FDL1 to 921600
+KEEP_CHARGE FDL1
+SEND fdl2-dl.bin to 0x9efffe00
+FDL2: incompatible partition
+EXEC FDL2
+DISABLE_TRANSCODE
+Reading Partition List
+[=====                                   ] 12.5%
+[==========                              ] 25.0%
+[===============                         ] 37.5%
+[====================                    ] 50.0%
+[=========================               ] 62.5%
+[==============================          ] 75.0%
+[===================================     ] 87.5%
+[========================================] 100.0%
+Read Part Done: user_partition+0x0, target: 0x8000, read: 0x8000
+  0                            splloader     256KB
+  1                               prodnv      64MB
+  2                             miscdata       1MB
+  3                                 misc       1MB
+  4                            trustos_a       6MB
+  5                            trustos_b       6MB
+  6                                sml_a       1MB
+  7                                sml_b       1MB
+  8                              uboot_a       3MB
+  9                              uboot_b       3MB
+ 10                            uboot_log      16MB
+ 11                                 logo       8MB
+ 12                            fbootlogo       8MB
+ 13                           l_fixnv1_a       2MB
+ 14                           l_fixnv2_a       2MB
+ 15                           l_fixnv1_b       2MB
+ 16                           l_fixnv2_b       2MB
+ 17                         l_runtimenv1       2MB
+ 18                         l_runtimenv2       2MB
+ 19                              persist       2MB
+ 20                            l_modem_a      25MB
+ 21                            l_modem_b      25MB
+ 22                          l_deltanv_a       1MB
+ 23                          l_deltanv_b       1MB
+ 24                             l_gdsp_a      10MB
+ 25                             l_gdsp_b      10MB
+ 26                             l_ldsp_a      20MB
+ 27                             l_ldsp_b      20MB
+ 28                            l_agdsp_a       6MB
+ 29                            l_agdsp_b       6MB
+ 30                             pm_sys_a       1MB
+ 31                             pm_sys_b       1MB
+ 32                             teecfg_a       1MB
+ 33                             teecfg_b       1MB
+ 34                         hypervsior_a      10MB
+ 35                         hypervsior_b      10MB
+ 36                               boot_a      64MB
+ 37                               boot_b      64MB
+ 38                        vendor_boot_a     100MB
+ 39                        vendor_boot_b     100MB
+ 40                          init_boot_a       8MB
+ 41                          init_boot_b       8MB
+ 42                                dtb_a       8MB
+ 43                                dtb_b       8MB
+ 44                               dtbo_a       8MB
+ 45                               dtbo_b       8MB
+ 46                           my_preload    1800MB
+ 47                                super    8000MB
+ 48                                cache      64MB
+ 49                             blackbox     200MB
+ 50                          opporeserve      64MB
+ 51                             vbmeta_a       1MB
+ 52                             vbmeta_b       1MB
+ 53                               ocdt_a       8MB
+ 54                               ocdt_b       8MB
+ 55                             metadata      64MB
+ 56                            sysdumpdb      10MB
+ 57                      vbmeta_system_a       1MB
+ 58                      vbmeta_system_b       1MB
+ 59                      vbmeta_vendor_a       1MB
+ 60                      vbmeta_vendor_b       1MB
+ 61                  vbmeta_system_ext_a       1MB
+ 62                  vbmeta_system_ext_b       1MB
+ 63                     vbmeta_product_a       1MB
+ 64                     vbmeta_product_b       1MB
+ 65                         vbmeta_odm_a       1MB
+ 66                         vbmeta_odm_b       1MB
+ 67                         avbmeta_rs_a       1MB
+ 68                         avbmeta_rs_b       1MB
+ 69                         common_rs1_a       8MB
+ 70                         common_rs1_b       8MB
+ 71                         common_rs2_a      16MB
+ 72                         common_rs2_b      16MB
+ 73                               calinv       2MB
+ 74                        oplusreserve1       8MB
+ 75                        oplusreserve3      64MB
+ 76                        oplusreserve5      32MB
+ 77                             userdata  227515MB
+standard gpt table saved to pgpt.bin
+skip saving sprd partition list packet
+partition list saved to partition_1785781992.xml
+Total number of partitions: 77
+Storage is emmc
+ENABLE_WRITE_RAW_DATA
+Device is using slot a
+Erase Part Done: splloader

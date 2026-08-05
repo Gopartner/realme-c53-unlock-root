@@ -4,10 +4,68 @@
 
 **Unlock bootloader dan root Realme C53 (dan tipe Realme lainnya). Mendukung KernelSU, Magisk, atau hybrid keduanya.**
 
-> ⚠️ **Pengguna RMX3760 (Unisoc T612)**: KSU-only sedang rusak karena bug ksud init.
-> **Hybrid Magisk v27 + modul KernelSU via Magisk module** adalah solusi stabil. Lihat [docs/KSU_INIT_BUG.md](docs/KSU_INIT_BUG.md).
+> ⚠️ **RMX3760 (Unisoc T612)**: Unlock bootloader + root Magisk **terverifikasi jalan di Android 15 DAN Android 14**.
+> KernelSU LKM hanya jalan di kernel Android 15 (`5.15.178`, `MODULE_SIG_FORCE=n`).
+> Di Android 14 (`5.4.254`, `MODULE_SIG_FORCE=y`) kernel **menolak modul tanpa tanda tangan** (`insmod` → `Key was rejected by service`) — pakai Magisk di sana.
 
 Setiap GitHub Release yang Anda buat di fork sendiri adalah build PRIBADI Anda — simpan dan pakai lagi kapanpun perlu root ulang di device yang sama.
+
+---
+
+## ✅ Hasil Terverifikasi (02-Agu-2026)
+
+| Metode | Android 15 (`5.15.178`) | Android 14 (`5.4.254`) |
+|--------|------------------------|------------------------|
+| **Unlock bootloader** (CVE-2022-38694) | ✅ OK | ✅ OK |
+| **Root Magisk** | ✅ OK | ✅ OK |
+| **KernelSU LKM** (module-load) | ✅ OK (`MODULE_SIG_FORCE=n`) | ❌ Terblokir (`MODULE_SIG_FORCE=y`) |
+
+> 🔎 Cek kernel dulu: `adb shell uname -r`
+> - `5.15.178-android13-8` → KernelSU / hybrid jalan
+> - `5.4.254-android12-9` → pakai **Magisk** (KernelSU butuh rebuild full kernel)
+
+Panduan langkah-demi-langkah lengkap dengan perintah, log, dan MD5: **[docs/UNLOCK_ROOT_GUIDE.md](docs/UNLOCK_ROOT_GUIDE.md)**
+
+> ✅ **Relock bootloader — TERVERIFIKASI (05-Agu-2026, Android 14)**:
+> `fastboot flashing lock` → **`Lock bootloader successfully!`** → `ro.boot.flash.locked=1`,
+> `verifiedbootstate=green`, `vbmeta.device_state=locked`, HP boot normal.
+> Prosedur lengkap: [Relock Bootloader](#-relock-bootloader).
+
+---
+
+## 🔒 Relock Bootloader
+
+Mengembalikan perangkat ke kondisi stock & terkunci penuh (terverifikasi di Android 14 / RMX3760).
+
+### Prasyarat
+- Backup boot stock (mis. `output/backup/boot_a_a14_stock.img`, `boot_b_a14_stock.img`)
+- Root dihapus — pasang boot stock di **kedua slot** agar verifikasi AVB lolos setelah lock
+
+### Langkah
+
+```bash
+# 1. Flash boot stock ke KEDUA slot (mengganti boot Magisk / menghapus root)
+adb reboot bootloader
+fastboot flash boot_a output/backup/boot_a_a14_stock.img
+fastboot flash boot_b output/backup/boot_b_a14_stock.img
+
+# 2. Kunci ulang bootloader (konfirmasi di layar HP dengan tombol volume jika diminta)
+fastboot flashing lock
+#   → fastboot getvar locked   → "Lock bootloader successfully!"
+
+# 3. Reboot dan verifikasi
+fastboot reboot
+adb shell getprop ro.boot.flash.locked        # 1
+adb shell getprop ro.boot.verifiedbootstate   # green
+adb shell getprop ro.boot.vbmeta.device_state # locked
+```
+
+> ℹ️ `fastboot flashing lock` tetap jalan walaupun bootloader di-unlock lewat exploit CVE.
+> First boot setelah lock lebih lama (factory reset) — cukup tunggu.
+>
+> ℹ️ Kalau perangkat Anda lapor `Not implement.` untuk `flashing lock`, kunci ulang dengan
+> menghapus marker `miscdata` (offset `8192`, 64 byte) memakai toolchain `spd_dump` CVE yang
+> sama saat unlock: marker nol = locked.
 
 ---
 
@@ -74,7 +132,8 @@ Fork repo ini → Jalankan GitHub Actions → Dapatkan Release SENDIRI
 
 | Model | SoC | Kernel | Status |
 |-------|-----|--------|--------|
-| Realme C53 (RMX3760) | Unisoc T612 | 5.15.178-android13-8 | ✅ Teruji |
+| Realme C53 (RMX3760) — Android 15 | Unisoc T612 | 5.15.178-android13-8 | ✅ Teruji (unlock + Magisk + KSU LKM) |
+| Realme C53 (RMX3760) — Android 14 | Unisoc T612 | 5.4.254-android12-9 | ✅ Teruji (unlock + Magisk; KSU terblokir `MODULE_SIG_FORCE=y`) |
 | Realme lain dengan Unisoc T612 | Unisoc T612 | 5.15.x | ⚠️ Mungkin work (sesuaikan versi kernel) |
 
 Untuk device lain, fork repo dan update versi kernel di `.github/workflows/build_kernelsu_module.yml`.

@@ -1,0 +1,12 @@
+branch:main, sha1:fa0becf5e3f026b3b99103c65de6eb9a8348b27c
+Successfully connected to port: 4
+CHECK_BAUD bootrom
+BSL_REP_VER: "SPRD3\0"
+CMD_CONNECT bootrom
+current exec_addr is 0x65015f08
+SEND .\spl-unlock.bin to 0x65000800
+SEND custom_exec_no_verify_65015f08.bin to 0x65015f08
+EXEC FDL1
+CHECK_BAUD FAIL
+CHECK_BAUD FAIL
+device removed, exiting...

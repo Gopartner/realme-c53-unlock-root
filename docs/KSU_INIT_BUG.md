@@ -37,6 +37,14 @@ Unknown — the init binary (Rust ELF, statically linked, AArch64) calls
 
 This hybrid approach is fully functional and reboot-safe.
 
+## Variant Note — Android 14 (kernel 5.4.254) vs Android 15 (5.15.178)
+
+- **Android 15** (kernel `5.15.178-android13-8`): `CONFIG_MODULE_SIG_FORCE=n` — KSU LKM loads fine.
+- **Android 14** (kernel `5.4.254-android12-9`): `CONFIG_MODULE_SIG_FORCE=y` **+** `CONFIG_MODVERSIONS=y`.
+  `insmod kernelsu.ko` → `Key was rejected by service`. KernelSU LKM is **impossible** without rebuilding
+  the kernel with your own signing key. Use **Magisk** on this variant (verified working).
+- See [docs/UNLOCK_ROOT_GUIDE.md](UNLOCK_ROOT_GUIDE.md) for the verified process.
+
 ## To Switch to KSU-Only in Future
 
 The KSU init binary needs to be fixed to properly call `init_module()` with
