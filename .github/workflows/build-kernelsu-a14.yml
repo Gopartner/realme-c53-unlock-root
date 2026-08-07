@@ -96,8 +96,8 @@ jobs:
           test "$(grep -c '^CONFIG_KSU=y' .config)" = "1" || { echo "FAIL: CONFIG_KSU not y"; exit 1; }
           grep -q 'CONFIG_LOCALVERSION="-android12-9-gf6794bd59091-ab267"' .config \
             || { echo "FAIL: LOCALVERSION wrong"; exit 1; }
-          grep -q '^# CONFIG_LTO_CLANG is not set' .config \
-            || { echo "FAIL: LTO_CLANG still enabled"; exit 1; }
+          grep -qE '^CONFIG_LTO_NONE=y$|^# CONFIG_LTO_CLANG is not set$' .config \
+            || { echo "FAIL: LTO not disabled"; exit 1; }
 
       - name: Build kernel Image
         run: |
