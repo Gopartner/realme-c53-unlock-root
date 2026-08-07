@@ -47,6 +47,15 @@ jobs:
           fi
           grep -E '^VERSION|^PATCHLEVEL|^SUBLEVEL|^EXTRAVERSION' Makefile
 
+      - name: Patch vendor kernel build issues
+        run: |
+          cd kernel_source
+          sed -i \
+            -e 's/^gpio_keys_button_enable_wakeup(struct/static int gpio_keys_button_enable_wakeup(struct/' \
+            -e 's/^gpio_keys_button_disable_wakeup(struct/static int gpio_keys_button_disable_wakeup(struct/' \
+            drivers/input/keyboard/gpio_keys.c
+          grep -n 'gpio_keys_button_.*_wakeup(struct' drivers/input/keyboard/gpio_keys.c
+
       - name: Add KernelSU-Next (built-in)
         run: |
           cd kernel_source
@@ -103,7 +112,8 @@ jobs:
         run: |
           cd kernel_source
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC=clang \
-            CLANG_TRIPLE=aarch64-linux-gnu- LLVM_IAS=1 -j$(nproc) Image
+            CLANG_TRIPLE=aarch64-linux-gnu- LLVM_IAS=1 \
+            KCFLAGS="-Wno-error=implicit-int -Wno-implicit-int" -j$(nproc) Image
         timeout-minutes: 60
 
       - name: Verify UTS_RELEASE (vermagic)
